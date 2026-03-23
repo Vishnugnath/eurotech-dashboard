@@ -1,0 +1,1947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eurotech Trading — ERP Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --surface3: #22273a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --accent: #4f8ef7;
+    --accent2: #7c5cfc;
+    --green: #22d3a5;
+    --amber: #f5a623;
+    --red: #f25f5c;
+    --blue: #4f8ef7;
+    --purple: #a78bfa;
+    --coral: #f97171;
+    --text: #e8eaf0;
+    --text2: #8892a4;
+    --text3: #545d72;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Sora', sans-serif;
+    --r: 10px;
+    --r2: 14px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* LAYOUT */
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px;
+    min-height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .main { margin-left: 220px; flex: 1; }
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 90;
+  }
+  .content { padding: 28px; }
+
+  /* SIDEBAR */
+  .logo {
+    padding: 20px 20px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .logo-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+    margin-top: 2px;
+  }
+  .logo-dot {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff;
+    margin-bottom: 10px;
+  }
+  .nav-section {
+    padding: 6px 12px 4px;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 8px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    margin: 1px 8px;
+    border-radius: var(--r);
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text2);
+    transition: all 0.15s;
+    text-decoration: none;
+    border: none;
+    background: none;
+    width: calc(100% - 16px);
+    text-align: left;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(79,142,247,0.12); color: var(--accent); }
+  .nav-item.active .nav-icon { color: var(--accent); }
+  .nav-icon { font-size: 15px; width: 16px; text-align: center; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--surface3);
+    color: var(--text2);
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 1px 7px;
+    border-radius: 20px;
+  }
+  .nav-item.active .nav-badge { background: rgba(79,142,247,0.2); color: var(--accent); }
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .company-tag {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: var(--mono);
+    text-align: center;
+  }
+
+  /* TOPBAR */
+  .page-title { font-size: 15px; font-weight: 500; color: var(--text); }
+  .page-subtitle { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(34,211,165,0.08);
+    border: 1px solid rgba(34,211,165,0.2);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--green);
+    font-family: var(--mono);
+  }
+  .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s ease infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .currency-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+  }
+
+  /* TABS */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* SECTIONS */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .section-val {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* KPI CARDS */
+  .kpi-grid { display: grid; gap: 12px; margin-bottom: 20px; }
+  .kpi-5 { grid-template-columns: repeat(5, 1fr); }
+  .kpi-4 { grid-template-columns: repeat(4, 1fr); }
+  .kpi-3 { grid-template-columns: repeat(3, 1fr); }
+  .kpi-2 { grid-template-columns: repeat(2, 1fr); }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r2);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--border2); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.accent::before { background: var(--accent); }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.amber::before { background: var(--amber); }
+  .kpi-card.red::before { background: var(--red); }
+  .kpi-card.purple::before { background: var(--purple); }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+    font-family: var(--mono);
+    margin-bottom: 6px;
+  }
+  .kpi-value span { font-size: 14px; color: var(--text3); }
+  .kpi-meta {
+    font-size: 11px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kpi-up { color: var(--green); }
+  .kpi-down { color: var(--red); }
+  .kpi-icon {
+    position: absolute;
+    right: 16px; top: 16px;
+    font-size: 20px;
+    opacity: 0.15;
+  }
+
+  /* CHART CARDS */
+  .chart-grid { display: grid; gap: 12px; margin-bottom: 20px; }
+  .c-2 { grid-template-columns: 1fr 1fr; }
+  .c-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .c-1-2 { grid-template-columns: 1fr 2fr; }
+  .c-2-1 { grid-template-columns: 2fr 1fr; }
+  .c-3-2 { grid-template-columns: 3fr 2fr; }
+  .c-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r2);
+    padding: 20px;
+    overflow: hidden;
+  }
+  .c-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .c-subtitle {
+    font-size: 11px;
+    color: var(--text3);
+    margin-bottom: 16px;
+    font-family: var(--mono);
+  }
+  .chart-wrap { position: relative; width: 100%; }
+  .h160 { height: 160px; }
+  .h200 { height: 200px; }
+  .h220 { height: 220px; }
+  .h260 { height: 260px; }
+  .h300 { height: 300px; }
+  .h320 { height: 320px; }
+  .h360 { height: 360px; }
+
+  /* CUSTOM LEGEND */
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    margin-bottom: 12px;
+  }
+  .leg-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text2);
+  }
+  .leg-sq {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* BAR ROWS */
+  .bar-list { display: flex; flex-direction: column; gap: 8px; }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .bar-label {
+    width: 130px;
+    flex-shrink: 0;
+    color: var(--text2);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: right;
+  }
+  .bar-label-sm { width: 90px; }
+  .bar-track {
+    flex: 1;
+    height: 20px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.8s ease;
+  }
+  .bar-num {
+    width: 52px;
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+  }
+
+  /* STATUS PILLS */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-family: var(--mono);
+  }
+  .pill-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .pill-green { background: rgba(34,211,165,0.1); color: var(--green); }
+  .pill-amber { background: rgba(245,166,35,0.1); color: var(--amber); }
+  .pill-red { background: rgba(242,95,92,0.1); color: var(--red); }
+  .pill-blue { background: rgba(79,142,247,0.1); color: var(--blue); }
+  .pill-gray { background: rgba(84,93,114,0.2); color: var(--text2); }
+  .pill-purple { background: rgba(167,139,250,0.1); color: var(--purple); }
+
+  /* TABLES */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .data-table td {
+    padding: 9px 12px;
+    font-size: 12px;
+    color: var(--text2);
+    border-bottom: 1px solid var(--border);
+  }
+  .data-table tbody tr:last-child td { border-bottom: none; }
+  .data-table tbody tr:hover td { background: var(--surface2); }
+  .data-table .num { font-family: var(--mono); color: var(--text); text-align: right; }
+  .data-table .name-cell { color: var(--text); font-weight: 400; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  /* DONUT CENTER */
+  .donut-wrap { position: relative; display: flex; align-items: center; justify-content: center; }
+  .donut-center {
+    position: absolute;
+    text-align: center;
+    pointer-events: none;
+  }
+  .donut-center-val { font-size: 22px; font-weight: 600; font-family: var(--mono); color: var(--text); }
+  .donut-center-label { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* PROGRESS RING */
+  .prog-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .prog-row:last-child { border-bottom: none; }
+  .prog-info { flex: 1; min-width: 0; }
+  .prog-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prog-sub { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+  .prog-track { width: 80px; height: 5px; background: var(--surface3); border-radius: 4px; flex-shrink: 0; }
+  .prog-fill { height: 100%; border-radius: 4px; }
+  .prog-val { font-size: 12px; font-family: var(--mono); color: var(--text); width: 52px; text-align: right; flex-shrink: 0; }
+
+  /* STAT ROW */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    align-items: center;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-key { color: var(--text2); }
+  .stat-val { font-family: var(--mono); color: var(--text); }
+
+  /* METRIC PAIR */
+  .metric-pair {
+    display: flex;
+    gap: 1px;
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .metric-half {
+    flex: 1;
+    padding: 14px 16px;
+    background: var(--surface);
+  }
+  .metric-half:first-child { border-right: 1px solid var(--border); }
+  .mh-label { font-size: 10px; color: var(--text3); margin-bottom: 4px; }
+  .mh-val { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--text); }
+  .mh-sub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* INVOICE TABLE WRAPPER */
+  .table-scroll { overflow-x: auto; }
+
+  /* OVERVIEW SUMMARY BLOCK */
+  .summary-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    padding: 14px 16px;
+    margin-bottom: 12px;
+  }
+  .summary-block .label { font-size: 10px; color: var(--text3); margin-bottom: 2px; }
+  .summary-block .val { font-size: 18px; font-weight: 600; font-family: var(--mono); color: var(--text); }
+  .summary-block .sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
+
+  /* HEALTH INDICATOR */
+  .health-bar-wrap { display: flex; flex-direction: column; gap: 10px; }
+  .health-item { display: flex; flex-direction: column; gap: 4px; }
+  .health-header { display: flex; justify-content: space-between; font-size: 11px; }
+  .health-name { color: var(--text2); }
+  .health-val { font-family: var(--mono); color: var(--text); }
+  .health-track { height: 6px; background: var(--surface3); border-radius: 4px; overflow: hidden; }
+  .health-fill { height: 100%; border-radius: 4px; }
+
+  /* CASHFLOW LINE */
+  .cf-number { font-size: 28px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+  .cf-positive { color: var(--green); }
+  .cf-negative { color: var(--red); }
+
+  /* ANIMATIONS */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .tab-panel.active { animation: fadeIn 0.25s ease; }
+
+  /* RESPONSIVE */
+  @media (max-width: 1200px) {
+    .kpi-5 { grid-template-columns: repeat(3, 1fr); }
+    .kpi-4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .sidebar { width: 60px; }
+    .logo-name, .logo-sub, .nav-section, .nav-item span, .nav-badge, .sidebar-footer { display: none; }
+    .main { margin-left: 60px; }
+    .c-2, .c-3, .c-1-2, .c-2-1, .c-3-2 { grid-template-columns: 1fr; }
+    .kpi-3, .kpi-4, .kpi-5 { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-dot">ET</div>
+    <div class="logo-name">Eurotech Trading</div>
+    <div class="logo-sub">ERP Dashboard · v2026</div>
+  </div>
+
+  <div class="nav-section">Main</div>
+  <button class="nav-item active" onclick="switchTab('overview', this)">
+    <span class="nav-icon">◈</span>
+    <span>Overview</span>
+    <span class="nav-badge">6</span>
+  </button>
+
+  <div class="nav-section">Operations</div>
+  <button class="nav-item" onclick="switchTab('sales', this)">
+    <span class="nav-icon">↗</span>
+    <span>Sales Orders</span>
+    <span class="nav-badge">831</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('invoices', this)">
+    <span class="nav-icon">◻</span>
+    <span>Invoices</span>
+    <span class="nav-badge">1000</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('purchase', this)">
+    <span class="nav-icon">↙</span>
+    <span>Purchase Orders</span>
+    <span class="nav-badge">246</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('inventory', this)">
+    <span class="nav-icon">⊟</span>
+    <span>Inventory</span>
+    <span class="nav-badge">666</span>
+  </button>
+
+  <div class="nav-section">Finance</div>
+  <button class="nav-item" onclick="switchTab('payments', this)">
+    <span class="nav-icon">⊕</span>
+    <span>Payments</span>
+    <span class="nav-badge">174</span>
+  </button>
+  <button class="nav-item" onclick="switchTab('partners', this)">
+    <span class="nav-icon">⊚</span>
+    <span>Partners</span>
+    <span class="nav-badge">858</span>
+  </button>
+
+  <div class="sidebar-footer">
+    <div class="company-tag">Eurotech Trading & Contracting · QA</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div>
+      <div class="page-title" id="page-title">Overview</div>
+      <div class="page-subtitle" id="page-subtitle">All modules · Odoo ERP Export</div>
+    </div>
+    <div class="topbar-right">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        Mar 2026
+      </div>
+      <div class="currency-tag">QAR</div>
+    </div>
+  </header>
+
+  <!-- CONTENT AREA -->
+  <div class="content">
+
+    <!-- ==================== OVERVIEW TAB ==================== -->
+    <div class="tab-panel active" id="tab-overview">
+
+      <div class="kpi-grid kpi-5">
+        <div class="kpi-card accent">
+          <div class="kpi-icon">↗</div>
+          <div class="kpi-label">Total Sales Value</div>
+          <div class="kpi-value"><span>QAR </span>24.8M</div>
+          <div class="kpi-meta">831 orders total</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-icon">⊕</div>
+          <div class="kpi-label">Cash Received</div>
+          <div class="kpi-value"><span>QAR </span>2.34M</div>
+          <div class="kpi-meta kpi-up">↑ vs 688K paid out</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-icon">◻</div>
+          <div class="kpi-label">Invoices Outstanding</div>
+          <div class="kpi-value"><span>QAR </span>2.34M</div>
+          <div class="kpi-meta kpi-down">973 unpaid invoices</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-icon">↙</div>
+          <div class="kpi-label">Procurement Spend</div>
+          <div class="kpi-value"><span>QAR </span>789K</div>
+          <div class="kpi-meta">246 purchase orders</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-icon">⊚</div>
+          <div class="kpi-label">Total Overdue</div>
+          <div class="kpi-value"><span>QAR </span>935K</div>
+          <div class="kpi-meta kpi-down">Avg DSO 189 days</div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-3">
+        <div class="c-card">
+          <div class="c-title">Monthly Revenue Trend</div>
+          <div class="c-subtitle">Sales order value · Oct 2025 – Mar 2026</div>
+          <div class="chart-wrap h200"><canvas id="ov-revenue"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Cash Flow</div>
+          <div class="c-subtitle">Inbound vs Outbound payments</div>
+          <div class="chart-wrap h200"><canvas id="ov-cashflow"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Module Summary</div>
+          <div class="c-subtitle">Record counts across all sheets</div>
+          <div class="chart-wrap h200"><canvas id="ov-modules"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Business Health Indicators</div>
+          <div class="c-subtitle">Key ratios and operational metrics</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="health-bar-wrap">
+            <div class="health-item">
+              <div class="health-header"><span class="health-name">Sales order confirmation rate</span><span class="health-val">24.4%</span></div>
+              <div class="health-track"><div class="health-fill" style="width:24.4%;background:var(--amber);"></div></div>
+            </div>
+            <div class="health-item">
+              <div class="health-header"><span class="health-name">Invoice payment rate</span><span class="health-val">2.2%</span></div>
+              <div class="health-track"><div class="health-fill" style="width:2.2%;background:var(--red);"></div></div>
+            </div>
+            <div class="health-item">
+              <div class="health-header"><span class="health-name">Delivery completion rate</span><span class="health-val">44.0%</span></div>
+              <div class="health-track"><div class="health-fill" style="width:44%;background:var(--green);"></div></div>
+            </div>
+            <div class="health-item">
+              <div class="health-header"><span class="health-name">PO fulfilment rate</span><span class="health-val">26.4%</span></div>
+              <div class="health-track"><div class="health-fill" style="width:26.4%;background:var(--accent);"></div></div>
+            </div>
+            <div class="health-item">
+              <div class="health-header"><span class="health-name">AR / AP coverage ratio</span><span class="health-val">132%</span></div>
+              <div class="health-track"><div class="health-fill" style="width:100%;background:var(--green);"></div></div>
+            </div>
+            <div class="health-item">
+              <div class="health-header"><span class="health-name">PO billing completion</span><span class="health-val">0.8%</span></div>
+              <div class="health-track"><div class="health-fill" style="width:0.8%;background:var(--red);"></div></div>
+            </div>
+            <div class="health-item">
+              <div class="health-header"><span class="health-name">On-time delivery rate (inventory)</span><span class="health-val">95.8%</span></div>
+              <div class="health-track"><div class="health-fill" style="width:95.8%;background:var(--green);"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Top Customers by Revenue</div>
+          <div class="c-subtitle">Cumulative sales order value</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label">Chevron Phillips</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent);"></div></div>
+              <div class="bar-num">7.32M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">North Oil Company</div>
+              <div class="bar-track"><div class="bar-fill" style="width:56%;background:var(--accent);"></div></div>
+              <div class="bar-num">4.10M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Samsung-CTCI JV</div>
+              <div class="bar-track"><div class="bar-fill" style="width:35%;background:var(--accent);"></div></div>
+              <div class="bar-num">2.56M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Hamad Medical</div>
+              <div class="bar-track"><div class="bar-fill" style="width:25%;background:var(--accent);"></div></div>
+              <div class="bar-num">1.86M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Qatar Shipyard</div>
+              <div class="bar-track"><div class="bar-fill" style="width:16%;background:var(--accent);"></div></div>
+              <div class="bar-num">1.19M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">QAPCO</div>
+              <div class="bar-track"><div class="bar-fill" style="width:16%;background:var(--accent);"></div></div>
+              <div class="bar-num">1.16M</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-3">
+        <div class="c-card">
+          <div class="c-title">Salesperson Performance</div>
+          <div class="c-subtitle">Revenue vs order count</div>
+          <div class="chart-wrap h220"><canvas id="ov-salesperson"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Receivables vs Payables</div>
+          <div class="c-subtitle">Partner financial positions</div>
+          <div class="chart-wrap h220"><canvas id="ov-ar-ap"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Overdue Analysis</div>
+          <div class="c-subtitle">Partner follow-up status</div>
+          <div class="divider" style="margin:12px 0;"></div>
+          <div class="stat-row"><span class="stat-key">No action needed</span><span class="stat-val"><span class="pill pill-green">824</span></span></div>
+          <div class="stat-row"><span class="stat-key">Needs follow-up action</span><span class="stat-val"><span class="pill pill-amber">32</span></span></div>
+          <div class="stat-row"><span class="stat-key">With overdue invoices</span><span class="stat-val"><span class="pill pill-red">2</span></span></div>
+          <div class="stat-row"><span class="stat-key">Total overdue (all)</span><span class="stat-val" style="color:var(--red);">935,102</span></div>
+          <div class="stat-row"><span class="stat-key">Total invoiced amount</span><span class="stat-val">5,803,130</span></div>
+          <div class="stat-row"><span class="stat-key">Average DSO</span><span class="stat-val" style="color:var(--amber);">189 days</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== SALES ORDERS TAB ==================== -->
+    <div class="tab-panel" id="tab-sales">
+
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent">
+          <div class="kpi-label">Total Orders</div>
+          <div class="kpi-value">831</div>
+          <div class="kpi-meta">Confirmed: 203 · Draft: 492</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Total Revenue</div>
+          <div class="kpi-value"><span>QAR </span>24.77M</div>
+          <div class="kpi-meta">Already invoiced: 615K</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">Un-invoiced Balance</div>
+          <div class="kpi-value"><span>QAR </span>485K</div>
+          <div class="kpi-meta kpi-down">55 orders to invoice</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Cancelled Orders</div>
+          <div class="kpi-value">45</div>
+          <div class="kpi-meta kpi-down">5.4% cancellation rate</div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Monthly Order Volume & Value</div>
+          <div class="c-subtitle">Oct 2025 – Mar 2026</div>
+          <div class="chart-wrap h260"><canvas id="so-monthly"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Order Status Distribution</div>
+          <div class="c-subtitle">All 831 orders</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#4f8ef7;"></div>Draft 492</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>Confirmed 203</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>Sent 91</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>Cancelled 45</div>
+          </div>
+          <div class="donut-wrap h220">
+            <canvas id="so-status"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val">831</div>
+              <div class="donut-center-label">orders</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-3">
+        <div class="c-card">
+          <div class="c-title">Invoice Status</div>
+          <div class="c-subtitle">Billing pipeline breakdown</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#545d72;"></div>Not invoiced 715</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>Invoiced 61</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>To invoice 55</div>
+          </div>
+          <div class="chart-wrap h180" style="height:180px;"><canvas id="so-inv-status"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Delivery Status</div>
+          <div class="c-subtitle">Fulfilment breakdown</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>Full 89</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>Pending 57</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>Partial 55</div>
+          </div>
+          <div class="chart-wrap h180" style="height:180px;"><canvas id="so-del-status"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Payment Terms</div>
+          <div class="c-subtitle">Most common terms used</div>
+          <div class="divider" style="margin:12px 0;"></div>
+          <div class="stat-row"><span class="stat-key">30 Days</span><span class="stat-val">573</span></div>
+          <div class="stat-row"><span class="stat-key">60 Days</span><span class="stat-val">44</span></div>
+          <div class="stat-row"><span class="stat-key">90 Days</span><span class="stat-val">18</span></div>
+          <div class="stat-row"><span class="stat-key">Immediate Payment</span><span class="stat-val">13</span></div>
+          <div class="stat-row"><span class="stat-key">Cash Against Collection</span><span class="stat-val">4</span></div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Salesperson Revenue Ranking</div>
+          <div class="c-subtitle">Total sales value by representative</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label">Thasreef Hussain</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--green);"></div></div>
+              <div class="bar-num">13.5M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Jafar Moodadi</div>
+              <div class="bar-track"><div class="bar-fill" style="width:41.6%;background:var(--green);"></div></div>
+              <div class="bar-num">5.62M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Huzni Hussain-T3</div>
+              <div class="bar-track"><div class="bar-fill" style="width:30.4%;background:var(--green);"></div></div>
+              <div class="bar-num">4.11M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Huzni Hussain-T2</div>
+              <div class="bar-track"><div class="bar-fill" style="width:10.4%;background:var(--green);"></div></div>
+              <div class="bar-num">1.40M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Faisal Ahamed</div>
+              <div class="bar-track"><div class="bar-fill" style="width:1.1%;background:var(--green);"></div></div>
+              <div class="bar-num">142K</div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Top Customers by Order Count</div>
+          <div class="c-subtitle">Number of sales orders placed</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label">North Oil Company</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--purple);"></div></div>
+              <div class="bar-num">250</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Samsung-CTCI JV</div>
+              <div class="bar-track"><div class="bar-fill" style="width:28.4%;background:var(--purple);"></div></div>
+              <div class="bar-num">71</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Hamad Medical</div>
+              <div class="bar-track"><div class="bar-fill" style="width:26.8%;background:var(--purple);"></div></div>
+              <div class="bar-num">67</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Chiyoda-Technip JV</div>
+              <div class="bar-track"><div class="bar-fill" style="width:23.2%;background:var(--purple);"></div></div>
+              <div class="bar-num">58</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label">Qatar Shipyard</div>
+              <div class="bar-track"><div class="bar-fill" style="width:21.6%;background:var(--purple);"></div></div>
+              <div class="bar-num">54</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== INVOICES TAB ==================== -->
+    <div class="tab-panel" id="tab-invoices">
+
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent">
+          <div class="kpi-label">Total Invoice Records</div>
+          <div class="kpi-value">1,000</div>
+          <div class="kpi-meta">924 posted · 55 draft · 21 cancelled</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Customer Invoices (AR)</div>
+          <div class="kpi-value"><span>QAR </span>1.87M</div>
+          <div class="kpi-meta">240 invoices raised</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">Vendor Bills (AP)</div>
+          <div class="kpi-value"><span>QAR </span>786K</div>
+          <div class="kpi-meta">242 vendor bills</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Total Amount Due</div>
+          <div class="kpi-value"><span>QAR </span>2.34M</div>
+          <div class="kpi-meta kpi-down">973 not paid</div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Invoice Type Breakdown</div>
+          <div class="c-subtitle">All 1,000 records by type</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#545d72;"></div>Journal Entry 517</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>Vendor Bill 242</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#4f8ef7;"></div>Customer Invoice 240</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>Credit Note 1</div>
+          </div>
+          <div class="chart-wrap h220"><canvas id="inv-type"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Payment Status</div>
+          <div class="c-subtitle">All invoice payment states</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>Not Paid 973</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>Paid 22</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>In Payment 5</div>
+          </div>
+          <div class="chart-wrap h220"><canvas id="inv-pay-status"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-3">
+        <div class="c-card">
+          <div class="c-title">Monthly Customer Invoices</div>
+          <div class="c-subtitle">Out invoices Jan–Mar 2026</div>
+          <div class="chart-wrap h200"><canvas id="inv-monthly"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Journal Distribution</div>
+          <div class="c-subtitle">Entries by accounting journal</div>
+          <div class="divider" style="margin:12px 0;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Bank</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent);"></div></div>
+              <div class="bar-num">261</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Purchases</div>
+              <div class="bar-track"><div class="bar-fill" style="width:92.7%;background:var(--accent);"></div></div>
+              <div class="bar-num">242</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Sales</div>
+              <div class="bar-track"><div class="bar-fill" style="width:92.3%;background:var(--accent);"></div></div>
+              <div class="bar-num">241</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Misc Operations</div>
+              <div class="bar-track"><div class="bar-fill" style="width:49%;background:var(--accent);"></div></div>
+              <div class="bar-num">128</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Inventory Val.</div>
+              <div class="bar-track"><div class="bar-fill" style="width:22.2%;background:var(--accent);"></div></div>
+              <div class="bar-num">58</div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Invoice Status Summary</div>
+          <div class="c-subtitle">Posting and workflow state</div>
+          <div class="divider" style="margin:12px 0;"></div>
+          <div class="stat-row"><span class="stat-key">Posted</span><span class="stat-val"><span class="pill pill-green">924</span></span></div>
+          <div class="stat-row"><span class="stat-key">Draft</span><span class="stat-val"><span class="pill pill-amber">55</span></span></div>
+          <div class="stat-row"><span class="stat-key">Cancelled</span><span class="stat-val"><span class="pill pill-red">21</span></span></div>
+          <div class="stat-row"><span class="stat-key">Customer Invoices Total</span><span class="stat-val">1,866,696</span></div>
+          <div class="stat-row"><span class="stat-key">Vendor Bills Total</span><span class="stat-val">785,836</span></div>
+          <div class="stat-row"><span class="stat-key">Net AR surplus</span><span class="stat-val" style="color:var(--green);">1,080,860</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PURCHASE ORDERS TAB ==================== -->
+    <div class="tab-panel" id="tab-purchase">
+
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent">
+          <div class="kpi-label">Total POs</div>
+          <div class="kpi-value">246</div>
+          <div class="kpi-meta">225 confirmed · 12 draft</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Total Spend</div>
+          <div class="kpi-value"><span>QAR </span>789K</div>
+          <div class="kpi-meta">Across all vendors</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">To Invoice (Pending Bills)</div>
+          <div class="kpi-value">65</div>
+          <div class="kpi-meta kpi-down">26.4% need billing</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-label">Receipt Pending</div>
+          <div class="kpi-value">158</div>
+          <div class="kpi-meta">65 full · 2 partial received</div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Monthly PO Volume & Spend</div>
+          <div class="c-subtitle">Sep 2025 – Mar 2026</div>
+          <div class="chart-wrap h260"><canvas id="po-monthly"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Currency Distribution</div>
+          <div class="c-subtitle">Purchase orders by transaction currency</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#4f8ef7;"></div>QAR 185</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>AED 40</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>USD 14</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#a78bfa;"></div>EUR 3</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>Other 4</div>
+          </div>
+          <div class="chart-wrap h220"><canvas id="po-currency"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-3">
+        <div class="c-card">
+          <div class="c-title">PO Status</div>
+          <div class="c-subtitle">Order workflow states</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>Confirmed</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>Draft</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>Cancelled</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#4f8ef7;"></div>Sent</div>
+          </div>
+          <div class="chart-wrap h180" style="height:180px;"><canvas id="po-status"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Top Vendors by Spend</div>
+          <div class="c-subtitle">Cumulative PO value</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Polyfit Ind.</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--coral);"></div></div>
+              <div class="bar-num">80,960</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Pipeline Sup.</div>
+              <div class="bar-track"><div class="bar-fill" style="width:82.8%;background:var(--coral);"></div></div>
+              <div class="bar-num">67,073</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Prakash Pump</div>
+              <div class="bar-track"><div class="bar-fill" style="width:82%;background:var(--coral);"></div></div>
+              <div class="bar-num">66,400</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Prompt Engg.</div>
+              <div class="bar-track"><div class="bar-fill" style="width:42.6%;background:var(--coral);"></div></div>
+              <div class="bar-num">34,500</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Prakash Elec.</div>
+              <div class="bar-track"><div class="bar-fill" style="width:42%;background:var(--coral);"></div></div>
+              <div class="bar-num">33,984</div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Top Vendors by Order Count</div>
+          <div class="c-subtitle">Most frequently used suppliers</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Toolcrib WLL</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--purple);"></div></div>
+              <div class="bar-num">13</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Verger Delporte</div>
+              <div class="bar-track"><div class="bar-fill" style="width:53.8%;background:var(--purple);"></div></div>
+              <div class="bar-num">7</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Apex Global</div>
+              <div class="bar-track"><div class="bar-fill" style="width:53.8%;background:var(--purple);"></div></div>
+              <div class="bar-num">7</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Oriental Trading</div>
+              <div class="bar-track"><div class="bar-fill" style="width:38.5%;background:var(--purple);"></div></div>
+              <div class="bar-num">5</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Natl Indus Gas</div>
+              <div class="bar-track"><div class="bar-fill" style="width:38.5%;background:var(--purple);"></div></div>
+              <div class="bar-num">5</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== INVENTORY TAB ==================== -->
+    <div class="tab-panel" id="tab-inventory">
+
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent">
+          <div class="kpi-label">Total Transfers</div>
+          <div class="kpi-value">666</div>
+          <div class="kpi-meta">356 outgoing · 310 incoming</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Completed</div>
+          <div class="kpi-value">293</div>
+          <div class="kpi-meta kpi-up">44% completion rate</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">Assigned / Ready</div>
+          <div class="kpi-value">241</div>
+          <div class="kpi-meta">Awaiting execution</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Late Deliveries</div>
+          <div class="kpi-value">28</div>
+          <div class="kpi-meta kpi-down">4.2% late rate</div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Monthly Transfer Activity</div>
+          <div class="c-subtitle">Scheduled transfers by month</div>
+          <div class="chart-wrap h260"><canvas id="inv-monthly-transfers"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Transfer Status by Operation Type</div>
+          <div class="c-subtitle">Incoming vs Outgoing breakdown</div>
+          <div class="chart-wrap h260"><canvas id="inv-ops-status"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-3">
+        <div class="c-card">
+          <div class="c-title">Overall Status Split</div>
+          <div class="c-subtitle">All 666 transfers</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>Done 293</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#4f8ef7;"></div>Assigned 241</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>Cancelled 77</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>Confirmed 47</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#545d72;"></div>Waiting 6+</div>
+          </div>
+          <div class="donut-wrap h200" style="height:200px;">
+            <canvas id="inv-status"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val">666</div>
+              <div class="donut-center-label">transfers</div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card" style="grid-column: span 2;">
+          <div class="c-title">Top 8 Products Transferred</div>
+          <div class="c-subtitle">By number of transfer records</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label" style="width:180px;">SWITCH-730000-LEGRAND</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--amber);"></div></div>
+              <div class="bar-num">12</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label" style="width:180px;">DIODE-SKKE 162/16-SEMIKRON</div>
+              <div class="bar-track"><div class="bar-fill" style="width:83.3%;background:var(--amber);"></div></div>
+              <div class="bar-num">10</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label" style="width:180px;">NISSAN TANAKA Sr.6650 Nozzle</div>
+              <div class="bar-track"><div class="bar-fill" style="width:75%;background:var(--amber);"></div></div>
+              <div class="bar-num">9</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label" style="width:180px;">DRILL:TWIST-DORMER</div>
+              <div class="bar-track"><div class="bar-fill" style="width:66.7%;background:var(--amber);"></div></div>
+              <div class="bar-num">8</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label" style="width:180px;">Block Terminal WEIDMULLER</div>
+              <div class="bar-track"><div class="bar-fill" style="width:58.3%;background:var(--amber);"></div></div>
+              <div class="bar-num">7</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label" style="width:180px;">FUSE-3001213.125-SIBA GmbH</div>
+              <div class="bar-track"><div class="bar-fill" style="width:58.3%;background:var(--amber);"></div></div>
+              <div class="bar-num">7</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label" style="width:180px;">UCP208 Pillow Block FYH Japan</div>
+              <div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--amber);"></div></div>
+              <div class="bar-num">6</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label" style="width:180px;">V-BELT BX54 MITSUBISHI</div>
+              <div class="bar-track"><div class="bar-fill" style="width:50%;background:var(--amber);"></div></div>
+              <div class="bar-num">6</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PAYMENTS TAB ==================== -->
+    <div class="tab-panel" id="tab-payments">
+
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card green">
+          <div class="kpi-label">Total Inbound (Receipts)</div>
+          <div class="kpi-value"><span>QAR </span>2.34M</div>
+          <div class="kpi-meta kpi-up">73 payment records</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Total Outbound (Payments)</div>
+          <div class="kpi-value"><span>QAR </span>688K</div>
+          <div class="kpi-meta">101 payment records</div>
+        </div>
+        <div class="kpi-card accent">
+          <div class="kpi-label">Net Cash Position</div>
+          <div class="kpi-value"><span>QAR </span>1.65M</div>
+          <div class="kpi-meta kpi-up">Positive flow</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">In Process</div>
+          <div class="kpi-value">131</div>
+          <div class="kpi-meta">PDC cheques pending</div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Monthly Cash Flow</div>
+          <div class="c-subtitle">Inbound vs Outbound · Dec 2025 – May 2026</div>
+          <div class="chart-wrap h280" style="height:280px;"><canvas id="pay-monthly"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Payment Status Breakdown</div>
+          <div class="c-subtitle">All 174 payment records</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>In Process 131</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>Paid 23</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>Cancelled 11</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#545d72;"></div>Draft 9</div>
+          </div>
+          <div class="donut-wrap h220">
+            <canvas id="pay-status"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val">174</div>
+              <div class="donut-center-label">payments</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-3">
+        <div class="c-card">
+          <div class="c-title">Payment Journals</div>
+          <div class="c-subtitle">Method / channel used</div>
+          <div class="divider" style="margin:12px 0;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Bank</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent);"></div></div>
+              <div class="bar-num">148</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Amex Card</div>
+              <div class="bar-track"><div class="bar-fill" style="width:8.1%;background:var(--accent);"></div></div>
+              <div class="bar-num">12</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Faisal Cash A/c</div>
+              <div class="bar-track"><div class="bar-fill" style="width:7.4%;background:var(--accent);"></div></div>
+              <div class="bar-num">11</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Abjith Cash A/C</div>
+              <div class="bar-track"><div class="bar-fill" style="width:1.4%;background:var(--accent);"></div></div>
+              <div class="bar-num">2</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Thasreef Cash</div>
+              <div class="bar-track"><div class="bar-fill" style="width:0.7%;background:var(--accent);"></div></div>
+              <div class="bar-num">1</div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Top Receipt Sources</div>
+          <div class="c-subtitle">Highest inbound payment customers</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">North Oil Co</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--green);"></div></div>
+              <div class="bar-num">1.63M</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">SENA CTCI JV</div>
+              <div class="bar-track"><div class="bar-fill" style="width:9.8%;background:var(--green);"></div></div>
+              <div class="bar-num">160K</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">CNPC Bohai</div>
+              <div class="bar-track"><div class="bar-fill" style="width:8.5%;background:var(--green);"></div></div>
+              <div class="bar-num">139K</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Saipem S.P.A</div>
+              <div class="bar-track"><div class="bar-fill" style="width:5.8%;background:var(--green);"></div></div>
+              <div class="bar-num">94K</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Mwani Qatar</div>
+              <div class="bar-track"><div class="bar-fill" style="width:4.7%;background:var(--green);"></div></div>
+              <div class="bar-num">77K</div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Top Vendor Payouts</div>
+          <div class="c-subtitle">Highest outbound payment suppliers</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Toolcrib WLL</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--red);"></div></div>
+              <div class="bar-num">65,107</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Prakash Pump</div>
+              <div class="bar-track"><div class="bar-fill" style="width:71.4%;background:var(--red);"></div></div>
+              <div class="bar-num">46,476</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Pipeline Sup.</div>
+              <div class="bar-track"><div class="bar-fill" style="width:47.7%;background:var(--red);"></div></div>
+              <div class="bar-num">31,073</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Al Ittefaq</div>
+              <div class="bar-track"><div class="bar-fill" style="width:39.5%;background:var(--red);"></div></div>
+              <div class="bar-num">25,700</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">IABA Trading</div>
+              <div class="bar-track"><div class="bar-fill" style="width:38.9%;background:var(--red);"></div></div>
+              <div class="bar-num">25,308</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PARTNERS TAB ==================== -->
+    <div class="tab-panel" id="tab-partners">
+
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent">
+          <div class="kpi-label">Total Partners</div>
+          <div class="kpi-value">858</div>
+          <div class="kpi-meta">137 customers · 462 vendors</div>
+        </div>
+        <div class="kpi-card green">
+          <div class="kpi-label">Total Receivable (AR)</div>
+          <div class="kpi-value"><span>QAR </span>1.21M</div>
+          <div class="kpi-meta">Outstanding from customers</div>
+        </div>
+        <div class="kpi-card red">
+          <div class="kpi-label">Total Payable (AP)</div>
+          <div class="kpi-value"><span>QAR </span>911K</div>
+          <div class="kpi-meta">Owed to suppliers</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-label">Total Overdue</div>
+          <div class="kpi-value"><span>QAR </span>935K</div>
+          <div class="kpi-meta kpi-down">Avg DSO: 189 days</div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Partner Type Distribution</div>
+          <div class="c-subtitle">Customer / Vendor classification</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#4f8ef7;"></div>Vendor only 462</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>Customer only 137</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#545d72;"></div>Neither 259</div>
+          </div>
+          <div class="chart-wrap h220"><canvas id="part-type"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Geographic Distribution</div>
+          <div class="c-subtitle">Top partner countries</div>
+          <div class="legend-row" style="margin-top:8px;">
+            <div class="leg-item"><div class="leg-sq" style="background:#4f8ef7;"></div>Qatar</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#22d3a5;"></div>UAE</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f5a623;"></div>UK</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#a78bfa;"></div>India</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#f25f5c;"></div>China</div>
+            <div class="leg-item"><div class="leg-sq" style="background:#545d72;"></div>Other</div>
+          </div>
+          <div class="chart-wrap h220"><canvas id="part-geo"></canvas></div>
+        </div>
+      </div>
+
+      <div class="chart-grid c-3">
+        <div class="c-card">
+          <div class="c-title">Top 5 by Receivable</div>
+          <div class="c-subtitle">Highest outstanding balances owed to us</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">North Oil Co</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--green);"></div></div>
+              <div class="bar-num">460,712</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Hamad Medical</div>
+              <div class="bar-track"><div class="bar-fill" style="width:35.8%;background:var(--green);"></div></div>
+              <div class="bar-num">164,841</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">SENA CTCI JV</div>
+              <div class="bar-track"><div class="bar-fill" style="width:21.3%;background:var(--green);"></div></div>
+              <div class="bar-num">98,046</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Rotary Engg Pte</div>
+              <div class="bar-track"><div class="bar-fill" style="width:16.6%;background:var(--green);"></div></div>
+              <div class="bar-num">76,581</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Zoho</div>
+              <div class="bar-track"><div class="bar-fill" style="width:12.5%;background:var(--green);"></div></div>
+              <div class="bar-num">57,396</div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Top 5 by Payable</div>
+          <div class="c-subtitle">Highest outstanding balances we owe</div>
+          <div class="divider" style="margin:12px 0 16px;"></div>
+          <div class="bar-list">
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Fakhruddin KT</div>
+              <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--red);"></div></div>
+              <div class="bar-num">161,733</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Teyseer Ind.</div>
+              <div class="bar-track"><div class="bar-fill" style="width:99.2%;background:var(--red);"></div></div>
+              <div class="bar-num">160,507</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Tool Crib WLL</div>
+              <div class="bar-track"><div class="bar-fill" style="width:97.2%;background:var(--red);"></div></div>
+              <div class="bar-num">157,250</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Pradeep Malaviya</div>
+              <div class="bar-track"><div class="bar-fill" style="width:76.4%;background:var(--red);"></div></div>
+              <div class="bar-num">123,498</div>
+            </div>
+            <div class="bar-row">
+              <div class="bar-label bar-label-sm">Qatar Fabrication</div>
+              <div class="bar-track"><div class="bar-fill" style="width:71.8%;background:var(--red);"></div></div>
+              <div class="bar-num">116,057</div>
+            </div>
+          </div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Financial Health Summary</div>
+          <div class="c-subtitle">Partner ledger totals</div>
+          <div class="divider" style="margin:12px 0;"></div>
+          <div class="stat-row"><span class="stat-key">Total Receivable (AR)</span><span class="stat-val" style="color:var(--green);">1,205,324</span></div>
+          <div class="stat-row"><span class="stat-key">Total Payable (AP)</span><span class="stat-val" style="color:var(--red);">910,776</span></div>
+          <div class="stat-row"><span class="stat-key">Net Working Capital</span><span class="stat-val" style="color:var(--green);">294,548</span></div>
+          <div class="stat-row"><span class="stat-key">Total Invoiced (all)</span><span class="stat-val">5,803,130</span></div>
+          <div class="stat-row"><span class="stat-key">Total Overdue</span><span class="stat-val" style="color:var(--red);">935,102</span></div>
+          <div class="stat-row"><span class="stat-key">Avg Days Sales Outstanding</span><span class="stat-val" style="color:var(--amber);">189 days</span></div>
+          <div class="stat-row"><span class="stat-key">Company type (companies)</span><span class="stat-val">251</span></div>
+          <div class="stat-row"><span class="stat-key">Company type (persons)</span><span class="stat-val">607</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+// ===== TAB SWITCHING =====
+const titles = {
+  overview: ['Overview', 'All modules · Odoo ERP Export'],
+  sales:    ['Sales Orders', '831 records · Eurotech Trading & Contracting'],
+  invoices: ['Invoices', '1,000 records · AR + AP + Journal Entries'],
+  purchase: ['Purchase Orders', '246 records · Procurement'],
+  inventory:['Inventory & Deliveries', '666 transfer records · WH Operations'],
+  payments: ['Payments', '174 records · Bank + Cash transactions'],
+  partners: ['Customers & Vendors', '858 partners · Qatar & MENA region'],
+};
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('page-title').textContent = titles[id][0];
+  document.getElementById('page-subtitle').textContent = titles[id][1];
+}
+
+// ===== CHART DEFAULTS =====
+const FONT = "'Sora', sans-serif";
+const MONO = "'DM Mono', monospace";
+const TEXT = '#8892a4';
+const TEXT2 = '#e8eaf0';
+const GRID = 'rgba(255,255,255,0.06)';
+const BORDER_COLOR = 'rgba(255,255,255,0.0)';
+
+Chart.defaults.color = TEXT;
+Chart.defaults.font.family = FONT;
+Chart.defaults.font.size = 11;
+
+function baseOpts(extra) {
+  return Object.assign({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: {
+      backgroundColor: '#1a1e28',
+      borderColor: 'rgba(255,255,255,0.1)',
+      borderWidth: 1,
+      titleFont: { family: FONT, size: 12 },
+      bodyFont: { family: MONO, size: 11 },
+      padding: 10
+    }},
+    scales: {
+      x: { grid: { color: GRID }, ticks: { color: TEXT } },
+      y: { grid: { color: GRID }, ticks: { color: TEXT } }
+    }
+  }, extra || {});
+}
+
+function noAxes() {
+  return { scales: {} };
+}
+
+const MONTHS = ['Oct 25','Nov 25','Dec 25','Jan 26','Feb 26','Mar 26'];
+const COLS = { blue:'#4f8ef7', green:'#22d3a5', amber:'#f5a623', red:'#f25f5c', purple:'#a78bfa', gray:'#545d72', coral:'#f97171' };
+
+// ===== OVERVIEW CHARTS =====
+new Chart(document.getElementById('ov-revenue'), {
+  type:'bar',
+  data:{
+    labels: MONTHS,
+    datasets:[
+      { label:'Revenue (QAR)', data:[329236,3439855,4697504,8162883,4114918,4022439],
+        backgroundColor:'rgba(79,142,247,0.7)', borderRadius:4 },
+      { label:'Order Count', data:[48,106,75,329,219,54],
+        type:'line', yAxisID:'y2', borderColor:COLS.green, backgroundColor:'transparent',
+        pointBackgroundColor:COLS.green, tension:0.4, pointRadius:3 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:false }, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT, callback:v => v>=1000000 ? (v/1000000).toFixed(1)+'M' : v>=1000?(v/1000)+'K':v }},
+      y2:{ position:'right', grid:{display:false}, ticks:{color:COLS.green} }
+    }
+  }
+});
+
+new Chart(document.getElementById('ov-cashflow'), {
+  type:'bar',
+  data:{
+    labels:['Dec 25','Jan 26','Feb 26','Mar 26'],
+    datasets:[
+      { label:'Inbound', data:[484124,370481,801308,52283], backgroundColor:'rgba(34,211,165,0.7)', borderRadius:4 },
+      { label:'Outbound', data:[-25092,-491983,-4787,-140595], backgroundColor:'rgba(242,95,92,0.7)', borderRadius:4 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:TEXT}, stacked:false },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT, callback:v => v>=1000?(v/1000).toFixed(0)+'K':v } }
+    }
+  }
+});
+
+new Chart(document.getElementById('ov-modules'), {
+  type:'bar',
+  data:{
+    labels:['Sales\nOrders','Invoices','Inventory','Partners','POs','Payments'],
+    datasets:[{ data:[831,1000,666,858,246,174],
+      backgroundColor:[COLS.blue,COLS.green,COLS.amber,COLS.purple,COLS.coral,COLS.red],
+      borderRadius:5
+    }]
+  },
+  options:{
+    indexAxis:'y',
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:TEXT} },
+      y:{ grid:{display:false}, ticks:{color:TEXT} }
+    }
+  }
+});
+
+new Chart(document.getElementById('ov-salesperson'), {
+  type:'bar',
+  data:{
+    labels:['Thasreef H.','Jafar M.','Huzni T3','Huzni T2','Faisal A.'],
+    datasets:[
+      { label:'Revenue', data:[13500196,5615171,4109109,1400210,142149],
+        backgroundColor:'rgba(34,211,165,0.7)', borderRadius:4 },
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{display:false}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT, callback:v => (v/1000000).toFixed(1)+'M' } }
+    }
+  }
+});
+
+new Chart(document.getElementById('ov-ar-ap'), {
+  type:'bar',
+  data:{
+    labels:['Receivable (AR)','Payable (AP)'],
+    datasets:[{
+      data:[1205324,910776],
+      backgroundColor:['rgba(34,211,165,0.7)','rgba(242,95,92,0.7)'],
+      borderRadius:6
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{display:false}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT, callback:v => (v/1000).toFixed(0)+'K' } }
+    }
+  }
+});
+
+// ===== SALES ORDERS CHARTS =====
+new Chart(document.getElementById('so-monthly'), {
+  type:'bar',
+  data:{
+    labels:MONTHS,
+    datasets:[
+      { label:'Revenue', data:[329236,3439855,4697504,8162883,4114918,4022439],
+        backgroundColor:'rgba(79,142,247,0.6)', borderRadius:4, yAxisID:'y' },
+      { label:'Orders', data:[48,106,75,329,219,54],
+        type:'line', borderColor:COLS.amber, backgroundColor:'transparent',
+        pointBackgroundColor:COLS.amber, tension:0.4, yAxisID:'y2', pointRadius:4 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT, callback:v => v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000)+'K':v }},
+      y2:{ position:'right', grid:{display:false}, ticks:{color:COLS.amber} }
+    }
+  }
+});
+
+new Chart(document.getElementById('so-status'), {
+  type:'doughnut',
+  data:{
+    labels:['Draft','Confirmed','Sent','Cancelled'],
+    datasets:[{ data:[492,203,91,45],
+      backgroundColor:[COLS.blue,COLS.green,COLS.amber,COLS.red],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'65%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+new Chart(document.getElementById('so-inv-status'), {
+  type:'doughnut',
+  data:{
+    labels:['Not Invoiced','Invoiced','To Invoice'],
+    datasets:[{ data:[715,61,55],
+      backgroundColor:[COLS.gray,COLS.green,COLS.amber],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+new Chart(document.getElementById('so-del-status'), {
+  type:'doughnut',
+  data:{
+    labels:['Full','Pending','Partial'],
+    datasets:[{ data:[89,57,55],
+      backgroundColor:[COLS.green,COLS.red,COLS.amber],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+// ===== INVOICE CHARTS =====
+new Chart(document.getElementById('inv-type'), {
+  type:'doughnut',
+  data:{
+    labels:['Journal Entry','Vendor Bill','Customer Invoice','Credit Note'],
+    datasets:[{ data:[517,242,240,1],
+      backgroundColor:[COLS.gray,COLS.amber,COLS.blue,COLS.red],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+new Chart(document.getElementById('inv-pay-status'), {
+  type:'doughnut',
+  data:{
+    labels:['Not Paid','Paid','In Payment'],
+    datasets:[{ data:[973,22,5],
+      backgroundColor:[COLS.red,COLS.green,COLS.amber],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+new Chart(document.getElementById('inv-monthly'), {
+  type:'bar',
+  data:{
+    labels:['Jan 26','Feb 26','Mar 26'],
+    datasets:[
+      { label:'Invoice Value', data:[1045315,685121,135572],
+        backgroundColor:'rgba(79,142,247,0.7)', borderRadius:4 },
+      { label:'Count', data:[104,104,28],
+        type:'line', borderColor:COLS.green, backgroundColor:'transparent',
+        pointBackgroundColor:COLS.green, yAxisID:'y2', tension:0.3, pointRadius:5 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{display:false}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT, callback:v => (v/1000).toFixed(0)+'K' }},
+      y2:{ position:'right', grid:{display:false}, ticks:{color:COLS.green} }
+    }
+  }
+});
+
+// ===== PURCHASE CHARTS =====
+new Chart(document.getElementById('po-monthly'), {
+  type:'bar',
+  data:{
+    labels:['Sep 25','Oct 25','Nov 25','Dec 25','Jan 26','Feb 26','Mar 26'],
+    datasets:[
+      { label:'PO Value', data:[426,17127,178468,45492,260013,164972,122991],
+        backgroundColor:'rgba(167,139,250,0.7)', borderRadius:4 },
+      { label:'Count', data:[1,9,25,7,92,84,28],
+        type:'line', borderColor:COLS.coral, backgroundColor:'transparent',
+        pointBackgroundColor:COLS.coral, yAxisID:'y2', tension:0.4, pointRadius:3 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT, callback:v => v>=1000?(v/1000).toFixed(0)+'K':v }},
+      y2:{ position:'right', grid:{display:false}, ticks:{color:COLS.coral} }
+    }
+  }
+});
+
+new Chart(document.getElementById('po-currency'), {
+  type:'doughnut',
+  data:{
+    labels:['QAR','AED','USD','EUR','Other'],
+    datasets:[{ data:[185,40,14,3,4],
+      backgroundColor:[COLS.blue,COLS.green,COLS.amber,COLS.purple,COLS.gray],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'58%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+new Chart(document.getElementById('po-status'), {
+  type:'doughnut',
+  data:{
+    labels:['Confirmed','Draft','Cancelled','Sent'],
+    datasets:[{ data:[225,12,7,2],
+      backgroundColor:[COLS.green,COLS.amber,COLS.red,COLS.blue],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+// ===== INVENTORY CHARTS =====
+new Chart(document.getElementById('inv-monthly-transfers'), {
+  type:'bar',
+  data:{
+    labels:['Oct 25','Nov 25','Dec 25','Jan 26','Feb 26','Mar 26'],
+    datasets:[{ label:'Transfers', data:[23,37,20,269,208,98],
+      backgroundColor:'rgba(245,166,35,0.7)', borderRadius:4 }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT} }
+    }
+  }
+});
+
+new Chart(document.getElementById('inv-ops-status'), {
+  type:'bar',
+  data:{
+    labels:['Assigned','Done','Cancelled','Confirmed','Waiting','Draft'],
+    datasets:[
+      { label:'Incoming', data:[178,94,38,0,0,0], backgroundColor:'rgba(79,142,247,0.7)', borderRadius:4 },
+      { label:'Outgoing', data:[63,199,39,47,6,2], backgroundColor:'rgba(34,211,165,0.7)', borderRadius:4 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:true, labels:{color:TEXT, font:{size:11}, boxWidth:12 }},
+      tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:TEXT}, stacked:false },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT} }
+    }
+  }
+});
+
+new Chart(document.getElementById('inv-status'), {
+  type:'doughnut',
+  data:{
+    labels:['Done','Assigned','Cancelled','Confirmed','Waiting/Draft'],
+    datasets:[{ data:[293,241,77,47,8],
+      backgroundColor:[COLS.green,COLS.blue,COLS.red,COLS.amber,COLS.gray],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'65%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+// ===== PAYMENT CHARTS =====
+new Chart(document.getElementById('pay-monthly'), {
+  type:'bar',
+  data:{
+    labels:['Dec 25','Jan 26','Feb 26','Mar 26','Apr 26','May 26'],
+    datasets:[
+      { label:'Inbound', data:[484124,370481,801308,52283,0,0],
+        backgroundColor:'rgba(34,211,165,0.7)', borderRadius:4 },
+      { label:'Outbound', data:[25092,491983,4787,140595,10000,15337],
+        backgroundColor:'rgba(242,95,92,0.6)', borderRadius:4 }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ display:true, labels:{color:TEXT, font:{size:11}, boxWidth:12 }},
+      tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{color:GRID}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT, callback:v => v>=1000?(v/1000).toFixed(0)+'K':v } }
+    }
+  }
+});
+
+new Chart(document.getElementById('pay-status'), {
+  type:'doughnut',
+  data:{
+    labels:['In Process','Paid','Cancelled','Draft'],
+    datasets:[{ data:[131,23,11,9],
+      backgroundColor:[COLS.amber,COLS.green,COLS.red,COLS.gray],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'65%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+// ===== PARTNER CHARTS =====
+new Chart(document.getElementById('part-type'), {
+  type:'doughnut',
+  data:{
+    labels:['Vendor only','Customer only','Neither'],
+    datasets:[{ data:[462,137,259],
+      backgroundColor:[COLS.blue,COLS.green,COLS.gray],
+      borderWidth:2, borderColor:'#0d0f14' }]
+  },
+  options:{ responsive:true, maintainAspectRatio:false, cutout:'60%',
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }} }
+});
+
+new Chart(document.getElementById('part-geo'), {
+  type:'bar',
+  data:{
+    labels:['Qatar','UAE','UK','India','China','Japan','Others'],
+    datasets:[{ data:[134,26,4,3,3,2,3],
+      backgroundColor:[COLS.blue,COLS.green,COLS.amber,COLS.purple,COLS.red,COLS.coral,COLS.gray],
+      borderRadius:5
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }},
+    scales:{
+      x:{ grid:{display:false}, ticks:{color:TEXT} },
+      y:{ grid:{color:GRID}, ticks:{color:TEXT} }
+    }
+  }
+});
+</script>
+</body>
+</html>
