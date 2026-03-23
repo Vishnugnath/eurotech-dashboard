@@ -118,6 +118,14 @@
   /* ERROR BANNER */
   .error-banner{background:rgba(242,95,92,.1);border:1px solid rgba(242,95,92,.3);border-radius:var(--r);padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--red);display:none;}
 
+  /* FY FILTER */
+  .fy-filter-wrap{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
+  .fy-label{font-size:11px;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;}
+  .fy-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text2);border-radius:6px;padding:5px 14px;font-size:11px;cursor:pointer;font-family:var(--mono);transition:all .15s;}
+  .fy-btn:hover{border-color:var(--border2);color:var(--text);}
+  .fy-btn.active{background:rgba(79,142,247,.15);border-color:rgba(79,142,247,.4);color:var(--accent);}
+  .fy-divider{width:1px;height:18px;background:var(--border);margin:0 4px;}
+
   @media(max-width:1200px){.kpi-5{grid-template-columns:repeat(3,1fr)}.kpi-4{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:900px){
     .sidebar{width:60px;}
@@ -153,6 +161,7 @@
   <button class="nav-item" onclick="switchTab('inventory',this)"><span class="nav-icon">⊟</span><span>Inventory</span><span class="nav-badge" id="nb-inventory">—</span></button>
   <div class="nav-section">Finance</div>
   <button class="nav-item" onclick="switchTab('payments',this)"><span class="nav-icon">⊕</span><span>Payments</span><span class="nav-badge" id="nb-payments">—</span></button>
+  <button class="nav-item" onclick="switchTab('expenses',this)"><span class="nav-icon">◈</span><span>Expenses</span><span class="nav-badge" id="nb-expenses">—</span></button>
   <button class="nav-item" onclick="switchTab('partners',this)"><span class="nav-icon">⊚</span><span>Partners</span><span class="nav-badge" id="nb-partners">—</span></button>
   <div class="sidebar-footer"><div class="company-tag">Eurotech Trading & Contracting · QA</div></div>
 </aside>
@@ -173,6 +182,21 @@
 
   <div class="content">
     <div class="error-banner" id="error-banner"></div>
+
+    <!-- FY FILTER BAR -->
+    <div class="fy-filter-wrap" id="fy-filter-bar">
+      <span class="fy-label">Financial Year</span>
+      <button class="fy-btn active" data-fy="all"    onclick="setFY('all',this)">All Time</button>
+      <button class="fy-btn"        data-fy="2025"   onclick="setFY('2025',this)">FY 2025</button>
+      <button class="fy-btn"        data-fy="2024"   onclick="setFY('2024',this)">FY 2024</button>
+      <button class="fy-btn"        data-fy="2023"   onclick="setFY('2023',this)">FY 2023</button>
+      <button class="fy-btn"        data-fy="2022"   onclick="setFY('2022',this)">FY 2022</button>
+      <div class="fy-divider"></div>
+      <button class="fy-btn"        data-fy="q1"     onclick="setFY('q1',this)">Q1</button>
+      <button class="fy-btn"        data-fy="q2"     onclick="setFY('q2',this)">Q2</button>
+      <button class="fy-btn"        data-fy="q3"     onclick="setFY('q3',this)">Q3</button>
+      <button class="fy-btn"        data-fy="q4"     onclick="setFY('q4',this)">Q4</button>
+    </div>
 
     <!-- OVERVIEW -->
     <div class="tab-panel active" id="tab-overview">
@@ -336,9 +360,34 @@
       </div>
     </div>
 
+    <!-- EXPENSES -->
+    <div class="tab-panel" id="tab-expenses">
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card red"><div class="kpi-icon">◈</div><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="exp-total">—</div><div class="kpi-meta" id="exp-total-sub">loading...</div></div>
+        <div class="kpi-card amber"><div class="kpi-icon">◻</div><div class="kpi-label">Vendor Bills</div><div class="kpi-value" id="exp-bills">—</div><div class="kpi-meta" id="exp-bills-sub">loading...</div></div>
+        <div class="kpi-card purple"><div class="kpi-icon">↙</div><div class="kpi-label">Purchase Orders</div><div class="kpi-value" id="exp-po">—</div><div class="kpi-meta" id="exp-po-sub">loading...</div></div>
+        <div class="kpi-card accent"><div class="kpi-icon">⊕</div><div class="kpi-label">Cash Outflows</div><div class="kpi-value" id="exp-cash">—</div><div class="kpi-meta" id="exp-cash-sub">loading...</div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Monthly Expense Trend</div><div class="c-subtitle">Vendor bills + PO spend combined</div><div class="chart-wrap h260"><canvas id="exp-monthly"></canvas></div></div>
+        <div class="c-card">
+          <div class="c-title">Expense Category Breakdown</div><div class="c-subtitle">By source type</div>
+          <div class="legend-row" id="exp-cat-legend" style="margin-top:8px;"></div>
+          <div class="donut-wrap h220"><canvas id="exp-cat"></canvas><div class="donut-center"><div class="donut-center-val" id="exp-cat-total">—</div><div class="donut-center-label">QAR total</div></div></div>
+        </div>
+      </div>
+      <div class="chart-grid c-3">
+        <div class="c-card"><div class="c-title">Top Vendors by Spend</div><div class="c-subtitle">Cumulative bill value</div><div class="divider"></div><div class="bar-list" id="exp-top-vendors"></div></div>
+        <div class="c-card"><div class="c-title">Bill Payment Status</div><div class="c-subtitle">Outstanding vs paid</div><div class="divider"></div><div id="exp-pay-status"></div></div>
+        <div class="c-card"><div class="c-title">Expense Summary</div><div class="c-subtitle">Key cost metrics</div><div class="divider"></div><div id="exp-summary"></div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Quarterly Expense vs Revenue</div><div class="c-subtitle">Cost vs income comparison</div><div class="chart-wrap h260"><canvas id="exp-vs-rev"></canvas></div></div>
+        <div class="c-card"><div class="c-title">Outbound Payment Trend</div><div class="c-subtitle">Monthly cash payments out</div><div class="chart-wrap h260"><canvas id="exp-payments-out"></canvas></div></div>
+      </div>
+    </div>
+
   </div>
-</div>
-</div>
 
 <script>
 const API = 'https://eurotech-api.vercel.app/api/odoo';
@@ -825,6 +874,195 @@ function renderOverview(salesData, invoiceData, purchaseData, paymentData, partn
     { scales:{x:{grid:{display:false},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}}});
 }
 
+// ── FY FILTER ─────────────────────────────────────────────
+let _activeFY = 'all';
+let _activeQ  = null;
+
+function fyRange(fy, q) {
+  const now = new Date();
+  if (fy === 'all') return null; // no filter
+  const year = parseInt(fy);
+  if (!isNaN(year)) {
+    if (q) {
+      const qMap = { q1:[1,3], q2:[4,6], q3:[7,9], q4:[10,12] };
+      const [ms, me] = qMap[q];
+      const start = `${year}-${String(ms).padStart(2,'0')}-01`;
+      const endDate = new Date(year, me, 0);
+      const end = endDate.toISOString().slice(0,10);
+      return { start, end };
+    }
+    return { start: `${year}-01-01`, end: `${year}-12-31` };
+  }
+  return null;
+}
+
+function inFYRange(dateStr, range) {
+  if (!range || !dateStr) return true;
+  const d = dateStr.slice(0,10);
+  return d >= range.start && d <= range.end;
+}
+
+function setFY(fy, btn) {
+  const isQuarter = ['q1','q2','q3','q4'].includes(fy);
+  if (!isQuarter) {
+    _activeFY = fy;
+    _activeQ  = null;
+    document.querySelectorAll('.fy-btn[data-fy]:not([data-fy^="q"])').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.fy-btn[data-fy^="q"]').forEach(b=>b.classList.remove('active'));
+  } else {
+    _activeQ = (_activeQ === fy) ? null : fy;
+    document.querySelectorAll('.fy-btn[data-fy^="q"]').forEach(b=>b.classList.remove('active'));
+    if (_activeQ) btn.classList.add('active');
+  }
+  reRenderAll();
+}
+
+function getCurrentRange() {
+  if (_activeFY === 'all' && !_activeQ) return null;
+  if (_activeFY === 'all' && _activeQ) {
+    // Q filter on all-time: use current year
+    return fyRange(String(new Date().getFullYear()), _activeQ);
+  }
+  return fyRange(_activeFY, _activeQ);
+}
+
+function filterByFY(records, dateField) {
+  const range = getCurrentRange();
+  if (!range) return records;
+  return records.filter(r => inFYRange(r[dateField] || '', range));
+}
+
+function reRenderAll() {
+  if (!window._salesRecords) return;
+  const salesData   = renderSales(filterByFY(window._salesRecords,'date_order'));
+  const invoiceData = renderInvoices(filterByFY(window._invoiceRecords,'invoice_date'));
+  renderPurchase(filterByFY(window._purchaseRecords,'date_order'));
+  renderInventory(filterByFY(window._inventoryRecords,'scheduled_date'));
+  const payData     = renderPayments(filterByFY(window._paymentRecords,'date'));
+  const partData    = renderPartners(window._partnerRecords); // partners are not date-filtered
+  const poSpend     = sumBy(filterByFY(window._purchaseRecords,'date_order'), r=>r.amount_total);
+  const allCounts   = [
+    filterByFY(window._salesRecords,'date_order').length,
+    filterByFY(window._invoiceRecords,'invoice_date').length,
+    filterByFY(window._inventoryRecords,'scheduled_date').length,
+    window._partnerRecords.length,
+    filterByFY(window._purchaseRecords,'date_order').length,
+    filterByFY(window._paymentRecords,'date').length,
+  ];
+  renderOverview(salesData, invoiceData, poSpend, payData, partData, allCounts);
+  renderExpenses(
+    filterByFY(window._invoiceRecords,'invoice_date'),
+    filterByFY(window._purchaseRecords,'date_order'),
+    filterByFY(window._paymentRecords,'date')
+  );
+}
+
+// ── EXPENSES RENDER ───────────────────────────────────────
+function renderExpenses(invoiceRecords, purchaseRecords, paymentRecords) {
+  const vendorBills = invoiceRecords.filter(r => r.move_type === 'in_invoice');
+  const billsTotal  = sumBy(vendorBills, r => r.amount_total);
+  const poTotal     = sumBy(purchaseRecords, r => r.amount_total);
+  const outbound    = paymentRecords.filter(r => r.payment_type === 'outbound');
+  const cashOut     = sumBy(outbound, r => r.amount);
+  const grandTotal  = billsTotal + poTotal;
+
+  setEl('nb-expenses', vendorBills.length + purchaseRecords.length);
+  setEl('exp-total',     fmtQAR(grandTotal));
+  setEl('exp-total-sub', `Bills + PO combined`);
+  setEl('exp-bills',     fmtQAR(billsTotal));
+  setEl('exp-bills-sub', `${vendorBills.length} vendor bills`);
+  setEl('exp-po',        fmtQAR(poTotal));
+  setEl('exp-po-sub',    `${purchaseRecords.length} purchase orders`);
+  setEl('exp-cash',      fmtQAR(cashOut));
+  setEl('exp-cash-sub',  `${outbound.length} outbound payments`);
+
+  const grandK = grandTotal >= 1e6 ? (grandTotal/1e6).toFixed(2)+'M' : (grandTotal/1e3).toFixed(0)+'K';
+  setEl('exp-cat-total', grandK);
+
+  // Monthly trend (bills + PO combined)
+  const monthlyBills = {}, monthlyPO = {};
+  vendorBills.forEach(r=>{const m=(r.invoice_date||'').slice(0,7);if(m)monthlyBills[m]=(monthlyBills[m]||0)+(r.amount_total||0);});
+  purchaseRecords.forEach(r=>{const m=(r.date_order||'').slice(0,7);if(m)monthlyPO[m]=(monthlyPO[m]||0)+(r.amount_total||0);});
+  const allMonths=[...new Set([...Object.keys(monthlyBills),...Object.keys(monthlyPO)])].sort().slice(-8);
+  makeChart('exp-monthly','bar',allMonths,[
+    { label:'Vendor Bills', data:allMonths.map(l=>monthlyBills[l]||0), backgroundColor:'rgba(242,95,92,0.7)',  borderRadius:4 },
+    { label:'PO Spend',     data:allMonths.map(l=>monthlyPO[l]||0),    backgroundColor:'rgba(167,139,250,0.6)', borderRadius:4 }
+  ],{ plugins:{legend:{display:true,labels:{color:TEXT,font:{size:11},boxWidth:12}}},
+      scales:{x:{grid:{color:GRID},ticks:{color:TEXT}},
+              y:{stacked:false,grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'K':v}}}});
+
+  // Category donut
+  const catData = [billsTotal, poTotal, cashOut];
+  const catLabels = ['Vendor Bills','PO Spend','Cash Outflows'];
+  const catColors = [COLS.red, COLS.purple, COLS.amber];
+  renderLegend('exp-cat-legend', catLabels.map((l,i)=>[`${l} ${fmtQAR(catData[i])}`,catColors[i]]));
+  makeChart('exp-cat','doughnut',catLabels,
+    [{ data:catData, backgroundColor:catColors, borderWidth:2, borderColor:'#0d0f14' }],
+    { cutout:'62%' });
+
+  // Top vendors by bill value
+  const byVendorBill = {};
+  vendorBills.forEach(r=>{const n=m2o(r.partner_id);byVendorBill[n]=(byVendorBill[n]||0)+(r.amount_total||0);});
+  renderBarList('exp-top-vendors', topN(byVendorBill,6), fmtQAR, COLS.red);
+
+  // Bill payment status
+  const payC = countBy(vendorBills, r=>r.payment_state);
+  const statusEl = document.getElementById('exp-pay-status');
+  if (statusEl) statusEl.innerHTML = [
+    ['Not Paid',  payC['not_paid']||0,   'pill-red'],
+    ['Paid',      payC['paid']||0,       'pill-green'],
+    ['In Payment',payC['in_payment']||0, 'pill-amber'],
+    ['Partial',   payC['partial']||0,    'pill-blue'],
+  ].map(([k,v,c])=>`<div class="stat-row"><span class="stat-key">${k}</span><span class="stat-val"><span class="pill ${c}">${v}</span></span></div>`).join('');
+
+  // Expense summary
+  const totalDueBills = sumBy(vendorBills, r=>r.amount_residual||0);
+  const avgBill       = vendorBills.length ? (billsTotal/vendorBills.length) : 0;
+  const summaryEl = document.getElementById('exp-summary');
+  if (summaryEl) summaryEl.innerHTML = [
+    ['Vendor Bills Total',   fmtQAR(billsTotal)],
+    ['PO Spend Total',       fmtQAR(poTotal)],
+    ['Cash Outflows Total',  fmtQAR(cashOut)],
+    ['Outstanding Bills Due',fmtQAR(totalDueBills)],
+    ['Avg Bill Value',       fmtQAR(avgBill)],
+    ['Expense / Revenue Ratio', window._salesRecords
+      ? ((grandTotal / Math.max(sumBy(filterByFY(window._salesRecords,'date_order'),r=>r.amount_total),1))*100).toFixed(1)+'%'
+      : '—'],
+  ].map(([k,v])=>`<div class="stat-row"><span class="stat-key">${k}</span><span class="stat-val">${v}</span></div>`).join('');
+
+  // Quarterly Expense vs Revenue
+  const fyYear = (_activeFY !== 'all') ? parseInt(_activeFY) : new Date().getFullYear();
+  const quarters = ['Q1','Q2','Q3','Q4'];
+  const qMonths  = [['01','02','03'],['04','05','06'],['07','08','09'],['10','11','12']];
+  const qExpense = quarters.map((_,i)=>{
+    const ms = qMonths[i];
+    return sumBy(vendorBills.filter(r=>{const m=(r.invoice_date||'').slice(5,7);return ms.includes(m);}), r=>r.amount_total)
+         + sumBy(purchaseRecords.filter(r=>{const m=(r.date_order||'').slice(5,7);return ms.includes(m);}), r=>r.amount_total);
+  });
+  const qRevenue = quarters.map((_,i)=>{
+    const ms = qMonths[i];
+    return sumBy((window._salesRecords||[]).filter(r=>{const m=(r.date_order||'').slice(5,7);return ms.includes(m);}), r=>r.amount_total);
+  });
+  makeChart('exp-vs-rev','bar',quarters,[
+    { label:'Expenses', data:qExpense, backgroundColor:'rgba(242,95,92,0.7)',  borderRadius:4 },
+    { label:'Revenue',  data:qRevenue, backgroundColor:'rgba(34,211,165,0.6)', borderRadius:4 }
+  ],{ plugins:{legend:{display:true,labels:{color:TEXT,font:{size:11},boxWidth:12}}},
+      scales:{x:{grid:{display:false},ticks:{color:TEXT}},
+              y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'K':v}}}});
+
+  // Outbound payment trend
+  const outMonthly = {};
+  outbound.forEach(r=>{const m=(r.date||'').slice(0,7);if(m)outMonthly[m]=(outMonthly[m]||0)+(r.amount||0);});
+  const outLabels = Object.keys(outMonthly).sort().slice(-8);
+  makeChart('exp-payments-out','line',outLabels,[
+    { label:'Cash Out', data:outLabels.map(l=>outMonthly[l]||0),
+      borderColor:COLS.amber, backgroundColor:'rgba(245,166,35,0.12)',
+      fill:true, tension:0.4, pointBackgroundColor:COLS.amber, pointRadius:3 }
+  ],{ scales:{x:{grid:{color:GRID},ticks:{color:TEXT}},
+              y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}}});
+}
+
 // ── TAB SWITCHING ──────────────────────────────────────────
 const tabTitles = {
   overview:  ['Overview','Live data · All modules'],
@@ -833,6 +1071,7 @@ const tabTitles = {
   purchase:  ['Purchase Orders','Live · purchase.order'],
   inventory: ['Inventory & Deliveries','Live · stock.picking'],
   payments:  ['Payments','Live · account.payment'],
+  expenses:  ['Expenses','Live · Vendor Bills + PO Spend'],
   partners:  ['Customers & Vendors','Live · res.partner'],
 };
 function switchTab(id, btn) {
@@ -894,16 +1133,28 @@ async function loadAll() {
 
     setProgress('Rendering dashboard...');
 
-    // Render all tabs
-    const salesData   = renderSales(window._salesRecords);
-    const invoiceData = renderInvoices(window._invoiceRecords);
-    renderPurchase(window._purchaseRecords);
-    renderInventory(window._inventoryRecords);
-    const payData     = renderPayments(window._paymentRecords);
+    // Render all tabs (with current FY filter applied)
+    const salesData   = renderSales(filterByFY(window._salesRecords,'date_order'));
+    const invoiceData = renderInvoices(filterByFY(window._invoiceRecords,'invoice_date'));
+    renderPurchase(filterByFY(window._purchaseRecords,'date_order'));
+    renderInventory(filterByFY(window._inventoryRecords,'scheduled_date'));
+    const payData     = renderPayments(filterByFY(window._paymentRecords,'date'));
     const partData    = renderPartners(window._partnerRecords);
+    renderExpenses(
+      filterByFY(window._invoiceRecords,'invoice_date'),
+      filterByFY(window._purchaseRecords,'date_order'),
+      filterByFY(window._paymentRecords,'date')
+    );
 
-    const poSpend = sumBy(window._purchaseRecords, r=>r.amount_total);
-    const allCounts = [soRes.total,invRes.total,invDelRes.total,partRes.total,poRes.total,payRes.total];
+    const poSpend = sumBy(filterByFY(window._purchaseRecords,'date_order'), r=>r.amount_total);
+    const allCounts = [
+      filterByFY(window._salesRecords,'date_order').length,
+      filterByFY(window._invoiceRecords,'invoice_date').length,
+      filterByFY(window._inventoryRecords,'scheduled_date').length,
+      window._partnerRecords.length,
+      filterByFY(window._purchaseRecords,'date_order').length,
+      filterByFY(window._paymentRecords,'date').length,
+    ];
     renderOverview(salesData, invoiceData, poSpend, payData, partData, allCounts);
 
     // Update UI
