@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eurotech Trading — Live ERP Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0f14;--surface:#13161d;--surface2:#1a1e28;--surface3:#22273a;
+    --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+    --accent:#4f8ef7;--accent2:#7c5cfc;--green:#22d3a5;--amber:#f5a623;
+    --red:#f25f5c;--blue:#4f8ef7;--purple:#a78bfa;--coral:#f97171;
+    --text:#e8eaf0;--text2:#8892a4;--text3:#545d72;
+    --mono:'DM Mono',monospace;--sans:'Sora',sans-serif;--r:10px;--r2:14px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100;overflow-y:auto;}
+  .main{margin-left:220px;flex:1;}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:58px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:90;}
+  .content{padding:28px;}
+  .logo{padding:20px 20px 8px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+  .logo-name{font-size:13px;font-weight:600;color:var(--text);letter-spacing:.02em;}
+  .logo-sub{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px;}
+  .logo-dot{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;margin-bottom:10px;}
+  .nav-section{padding:6px 12px 4px;font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin-top:8px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;margin:1px 8px;border-radius:var(--r);cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;border:none;background:none;width:calc(100% - 16px);text-align:left;}
+  .nav-item:hover{background:var(--surface2);color:var(--text);}
+  .nav-item.active{background:rgba(79,142,247,.12);color:var(--accent);}
+  .nav-icon{font-size:15px;width:16px;text-align:center;}
+  .nav-badge{margin-left:auto;background:var(--surface3);color:var(--text2);font-size:10px;font-family:var(--mono);padding:1px 7px;border-radius:20px;}
+  .nav-item.active .nav-badge{background:rgba(79,142,247,.2);color:var(--accent);}
+  .sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border);}
+  .company-tag{font-size:10px;color:var(--text3);font-family:var(--mono);text-align:center;}
+  .page-title{font-size:15px;font-weight:500;color:var(--text);}
+  .page-subtitle{font-size:11px;color:var(--text3);font-family:var(--mono);}
+  .topbar-right{display:flex;align-items:center;gap:14px;}
+  .live-badge{display:flex;align-items:center;gap:6px;background:rgba(34,211,165,.08);border:1px solid rgba(34,211,165,.2);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--green);font-family:var(--mono);}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s ease infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .currency-tag{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:3px 8px;}
+  .refresh-btn{background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--accent);border-radius:6px;padding:4px 12px;font-size:11px;cursor:pointer;font-family:var(--mono);transition:all .2s;}
+  .refresh-btn:hover{background:rgba(79,142,247,.2);}
+  .last-updated{font-size:10px;color:var(--text3);font-family:var(--mono);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;animation:fadeIn .25s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .kpi-grid{display:grid;gap:12px;margin-bottom:20px;}
+  .kpi-5{grid-template-columns:repeat(5,1fr);}
+  .kpi-4{grid-template-columns:repeat(4,1fr);}
+  .kpi-3{grid-template-columns:repeat(3,1fr);}
+  .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:18px 20px;position:relative;overflow:hidden;transition:border-color .2s;}
+  .kpi-card:hover{border-color:var(--border2);}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .kpi-card.accent::before{background:var(--accent);}
+  .kpi-card.green::before{background:var(--green);}
+  .kpi-card.amber::before{background:var(--amber);}
+  .kpi-card.red::before{background:var(--red);}
+  .kpi-card.purple::before{background:var(--purple);}
+  .kpi-label{font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;}
+  .kpi-value{font-size:26px;font-weight:600;color:var(--text);line-height:1;font-family:var(--mono);margin-bottom:6px;}
+  .kpi-value span{font-size:14px;color:var(--text3);}
+  .kpi-meta{font-size:11px;color:var(--text2);}
+  .kpi-up{color:var(--green);}
+  .kpi-down{color:var(--red);}
+  .kpi-icon{position:absolute;right:16px;top:16px;font-size:20px;opacity:.15;}
+  .chart-grid{display:grid;gap:12px;margin-bottom:20px;}
+  .c-2{grid-template-columns:1fr 1fr;}
+  .c-3{grid-template-columns:1fr 1fr 1fr;}
+  .c-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:20px;overflow:hidden;}
+  .c-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;}
+  .c-subtitle{font-size:11px;color:var(--text3);margin-bottom:16px;font-family:var(--mono);}
+  .chart-wrap{position:relative;width:100%;}
+  .h200{height:200px;}.h220{height:220px;}.h260{height:260px;}.h280{height:280px;}
+  .legend-row{display:flex;flex-wrap:wrap;gap:10px 16px;margin-bottom:12px;}
+  .leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);}
+  .leg-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+  .bar-list{display:flex;flex-direction:column;gap:8px;}
+  .bar-row{display:flex;align-items:center;gap:8px;font-size:12px;}
+  .bar-label{width:130px;flex-shrink:0;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;}
+  .bar-label-sm{width:90px;}
+  .bar-track{flex:1;height:20px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;transition:width .8s ease;}
+  .bar-num{width:60px;flex-shrink:0;font-family:var(--mono);font-size:11px;color:var(--text3);}
+  .pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;font-family:var(--mono);}
+  .pill-green{background:rgba(34,211,165,.1);color:var(--green);}
+  .pill-amber{background:rgba(245,166,35,.1);color:var(--amber);}
+  .pill-red{background:rgba(242,95,92,.1);color:var(--red);}
+  .pill-blue{background:rgba(79,142,247,.1);color:var(--blue);}
+  .pill-gray{background:rgba(84,93,114,.2);color:var(--text2);}
+  .divider{height:1px;background:var(--border);margin:16px 0;}
+  .stat-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;align-items:center;}
+  .stat-row:last-child{border-bottom:none;}
+  .stat-key{color:var(--text2);}
+  .stat-val{font-family:var(--mono);color:var(--text);}
+  .donut-wrap{position:relative;display:flex;align-items:center;justify-content:center;}
+  .donut-center{position:absolute;text-align:center;pointer-events:none;}
+  .donut-center-val{font-size:22px;font-weight:600;font-family:var(--mono);color:var(--text);}
+  .donut-center-label{font-size:10px;color:var(--text3);margin-top:2px;}
+  .health-bar-wrap{display:flex;flex-direction:column;gap:10px;}
+  .health-item{display:flex;flex-direction:column;gap:4px;}
+  .health-header{display:flex;justify-content:space-between;font-size:11px;}
+  .health-name{color:var(--text2);}
+  .health-val{font-family:var(--mono);color:var(--text);}
+  .health-track{height:6px;background:var(--surface3);border-radius:4px;overflow:hidden;}
+  .health-fill{height:100%;border-radius:4px;}
+
+  /* LOADER */
+  #loader{position:fixed;inset:0;background:rgba(13,15,20,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;}
+  .loader-spinner{width:40px;height:40px;border:3px solid var(--surface3);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:16px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loader-text{font-family:var(--mono);font-size:12px;color:var(--text3);}
+  .loader-progress{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--accent);}
+
+  /* ERROR BANNER */
+  .error-banner{background:rgba(242,95,92,.1);border:1px solid rgba(242,95,92,.3);border-radius:var(--r);padding:12px 16px;margin-bottom:16px;font-size:12px;color:var(--red);display:none;}
+
+  @media(max-width:1200px){.kpi-5{grid-template-columns:repeat(3,1fr)}.kpi-4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:900px){
+    .sidebar{width:60px;}
+    .logo-name,.logo-sub,.nav-section,.nav-item span,.nav-badge,.sidebar-footer{display:none;}
+    .main{margin-left:60px;}
+    .c-2,.c-3{grid-template-columns:1fr;}
+    .kpi-3,.kpi-4,.kpi-5{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">Connecting to Odoo...</div>
+  <div class="loader-progress" id="loader-progress">Loading modules</div>
+</div>
+
+<div class="shell">
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-dot">ET</div>
+    <div class="logo-name">Eurotech Trading</div>
+    <div class="logo-sub">Live ERP · Odoo 17</div>
+  </div>
+  <div class="nav-section">Main</div>
+  <button class="nav-item active" onclick="switchTab('overview',this)"><span class="nav-icon">◈</span><span>Overview</span><span class="nav-badge" id="nb-overview">6</span></button>
+  <div class="nav-section">Operations</div>
+  <button class="nav-item" onclick="switchTab('sales',this)"><span class="nav-icon">↗</span><span>Sales Orders</span><span class="nav-badge" id="nb-sales">—</span></button>
+  <button class="nav-item" onclick="switchTab('invoices',this)"><span class="nav-icon">◻</span><span>Invoices</span><span class="nav-badge" id="nb-invoices">—</span></button>
+  <button class="nav-item" onclick="switchTab('purchase',this)"><span class="nav-icon">↙</span><span>Purchase Orders</span><span class="nav-badge" id="nb-purchase">—</span></button>
+  <button class="nav-item" onclick="switchTab('inventory',this)"><span class="nav-icon">⊟</span><span>Inventory</span><span class="nav-badge" id="nb-inventory">—</span></button>
+  <div class="nav-section">Finance</div>
+  <button class="nav-item" onclick="switchTab('payments',this)"><span class="nav-icon">⊕</span><span>Payments</span><span class="nav-badge" id="nb-payments">—</span></button>
+  <button class="nav-item" onclick="switchTab('partners',this)"><span class="nav-icon">⊚</span><span>Partners</span><span class="nav-badge" id="nb-partners">—</span></button>
+  <div class="sidebar-footer"><div class="company-tag">Eurotech Trading & Contracting · QA</div></div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div>
+      <div class="page-title" id="page-title">Overview</div>
+      <div class="page-subtitle" id="page-subtitle">Live data · Odoo ERP</div>
+    </div>
+    <div class="topbar-right">
+      <div class="last-updated" id="last-updated">Loading...</div>
+      <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+      <div class="live-badge"><div class="live-dot"></div><span id="live-label">Connecting</span></div>
+      <div class="currency-tag">QAR</div>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="error-banner" id="error-banner"></div>
+
+    <!-- OVERVIEW -->
+    <div class="tab-panel active" id="tab-overview">
+      <div class="kpi-grid kpi-5">
+        <div class="kpi-card accent"><div class="kpi-icon">↗</div><div class="kpi-label">Total Sales Value</div><div class="kpi-value" id="ov-rev">—</div><div class="kpi-meta" id="ov-rev-sub">loading...</div></div>
+        <div class="kpi-card green"><div class="kpi-icon">⊕</div><div class="kpi-label">Cash Received</div><div class="kpi-value" id="ov-received">—</div><div class="kpi-meta kpi-up" id="ov-received-sub">loading...</div></div>
+        <div class="kpi-card amber"><div class="kpi-icon">◻</div><div class="kpi-label">Amount Due</div><div class="kpi-value" id="ov-due">—</div><div class="kpi-meta kpi-down" id="ov-due-sub">loading...</div></div>
+        <div class="kpi-card purple"><div class="kpi-icon">↙</div><div class="kpi-label">Procurement Spend</div><div class="kpi-value" id="ov-spend">—</div><div class="kpi-meta" id="ov-spend-sub">loading...</div></div>
+        <div class="kpi-card red"><div class="kpi-icon">⊚</div><div class="kpi-label">Total Overdue</div><div class="kpi-value" id="ov-overdue">—</div><div class="kpi-meta kpi-down" id="ov-overdue-sub">loading...</div></div>
+      </div>
+      <div class="chart-grid c-3">
+        <div class="c-card"><div class="c-title">Monthly Revenue</div><div class="c-subtitle">Sales order value · last 6 months</div><div class="chart-wrap h200"><canvas id="ov-revenue"></canvas></div></div>
+        <div class="c-card"><div class="c-title">Cash Flow</div><div class="c-subtitle">Inbound vs Outbound</div><div class="chart-wrap h200"><canvas id="ov-cashflow"></canvas></div></div>
+        <div class="c-card"><div class="c-title">Module Record Counts</div><div class="c-subtitle">Live record totals</div><div class="chart-wrap h200"><canvas id="ov-modules"></canvas></div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Business Health Indicators</div><div class="c-subtitle">Key operational ratios</div><div class="divider"></div>
+          <div class="health-bar-wrap" id="ov-health"></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Top Customers by Revenue</div><div class="c-subtitle">Cumulative sales order value</div><div class="divider"></div>
+          <div class="bar-list" id="ov-top-customers"></div>
+        </div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Salesperson Revenue</div><div class="c-subtitle">By total sales value</div><div class="chart-wrap h220"><canvas id="ov-salesperson"></canvas></div></div>
+        <div class="c-card"><div class="c-title">Receivables vs Payables</div><div class="c-subtitle">AR / AP position</div><div class="chart-wrap h220"><canvas id="ov-ar-ap"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- SALES -->
+    <div class="tab-panel" id="tab-sales">
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent"><div class="kpi-label">Total Orders</div><div class="kpi-value" id="so-total">—</div><div class="kpi-meta" id="so-total-sub">loading...</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="so-rev">—</div><div class="kpi-meta" id="so-rev-sub">loading...</div></div>
+        <div class="kpi-card amber"><div class="kpi-label">Un-invoiced Balance</div><div class="kpi-value" id="so-uninv">—</div><div class="kpi-meta kpi-down" id="so-uninv-sub">loading...</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Cancelled</div><div class="kpi-value" id="so-cancel">—</div><div class="kpi-meta kpi-down" id="so-cancel-sub">loading...</div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Monthly Order Volume & Value</div><div class="c-subtitle">Last 6 months</div><div class="chart-wrap h260"><canvas id="so-monthly"></canvas></div></div>
+        <div class="c-card">
+          <div class="c-title">Order Status</div><div class="c-subtitle">All orders breakdown</div>
+          <div class="legend-row" id="so-status-legend" style="margin-top:8px;"></div>
+          <div class="donut-wrap h220"><canvas id="so-status"></canvas><div class="donut-center"><div class="donut-center-val" id="so-status-total">—</div><div class="donut-center-label">orders</div></div></div>
+        </div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Top Customers by Revenue</div><div class="c-subtitle">Cumulative order value</div><div class="divider"></div><div class="bar-list" id="so-top-customers"></div></div>
+        <div class="c-card"><div class="c-title">Salesperson Performance</div><div class="c-subtitle">Orders & revenue</div><div class="divider"></div><div class="bar-list" id="so-salesperson"></div></div>
+      </div>
+    </div>
+
+    <!-- INVOICES -->
+    <div class="tab-panel" id="tab-invoices">
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent"><div class="kpi-label">Total Records</div><div class="kpi-value" id="inv-total">—</div><div class="kpi-meta" id="inv-total-sub">loading...</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Customer Invoices (AR)</div><div class="kpi-value" id="inv-ar">—</div><div class="kpi-meta" id="inv-ar-sub">loading...</div></div>
+        <div class="kpi-card amber"><div class="kpi-label">Vendor Bills (AP)</div><div class="kpi-value" id="inv-ap">—</div><div class="kpi-meta" id="inv-ap-sub">loading...</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Amount Due</div><div class="kpi-value" id="inv-due">—</div><div class="kpi-meta kpi-down" id="inv-due-sub">loading...</div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card">
+          <div class="c-title">Invoice Type Breakdown</div><div class="c-subtitle">All records by type</div>
+          <div class="legend-row" id="inv-type-legend" style="margin-top:8px;"></div>
+          <div class="donut-wrap h220"><canvas id="inv-type"></canvas></div>
+        </div>
+        <div class="c-card">
+          <div class="c-title">Payment Status</div><div class="c-subtitle">Collection status</div>
+          <div class="legend-row" id="inv-pay-legend" style="margin-top:8px;"></div>
+          <div class="donut-wrap h220"><canvas id="inv-pay-status"></canvas><div class="donut-center"><div class="donut-center-val" id="inv-pay-total">—</div><div class="donut-center-label">invoices</div></div></div>
+        </div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Monthly Invoice Value</div><div class="c-subtitle">Customer invoices by month</div><div class="chart-wrap h220"><canvas id="inv-monthly"></canvas></div></div>
+        <div class="c-card"><div class="c-title">Invoice Summary</div><div class="c-subtitle">Key financial figures</div><div class="divider"></div><div id="inv-summary"></div></div>
+      </div>
+    </div>
+
+    <!-- PURCHASE -->
+    <div class="tab-panel" id="tab-purchase">
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent"><div class="kpi-label">Total POs</div><div class="kpi-value" id="po-total">—</div><div class="kpi-meta" id="po-total-sub">loading...</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Total Spend</div><div class="kpi-value" id="po-spend">—</div><div class="kpi-meta" id="po-spend-sub">loading...</div></div>
+        <div class="kpi-card amber"><div class="kpi-label">Pending Billing</div><div class="kpi-value" id="po-billing">—</div><div class="kpi-meta kpi-down" id="po-billing-sub">loading...</div></div>
+        <div class="kpi-card purple"><div class="kpi-label">Receipt Pending</div><div class="kpi-value" id="po-receipt">—</div><div class="kpi-meta" id="po-receipt-sub">loading...</div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Monthly PO Volume & Spend</div><div class="c-subtitle">Last 6 months</div><div class="chart-wrap h260"><canvas id="po-monthly"></canvas></div></div>
+        <div class="c-card">
+          <div class="c-title">Currency Distribution</div><div class="c-subtitle">By transaction currency</div>
+          <div class="legend-row" id="po-curr-legend" style="margin-top:8px;"></div>
+          <div class="donut-wrap h220"><canvas id="po-currency"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Top Vendors by Spend</div><div class="c-subtitle">Cumulative PO value</div><div class="divider"></div><div class="bar-list" id="po-top-vendors"></div></div>
+        <div class="c-card"><div class="c-title">PO Status Summary</div><div class="c-subtitle">Order workflow states</div><div class="divider"></div><div id="po-status-summary"></div></div>
+      </div>
+    </div>
+
+    <!-- INVENTORY -->
+    <div class="tab-panel" id="tab-inventory">
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent"><div class="kpi-label">Total Transfers</div><div class="kpi-value" id="inv-del-total">—</div><div class="kpi-meta" id="inv-del-total-sub">loading...</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Completed</div><div class="kpi-value" id="inv-del-done">—</div><div class="kpi-meta kpi-up" id="inv-del-done-sub">loading...</div></div>
+        <div class="kpi-card amber"><div class="kpi-label">Assigned / Ready</div><div class="kpi-value" id="inv-del-assigned">—</div><div class="kpi-meta" id="inv-del-assigned-sub">loading...</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Late Deliveries</div><div class="kpi-value" id="inv-del-late">—</div><div class="kpi-meta kpi-down" id="inv-del-late-sub">loading...</div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Monthly Transfer Activity</div><div class="c-subtitle">Transfers by month</div><div class="chart-wrap h260"><canvas id="inv-monthly-transfers"></canvas></div></div>
+        <div class="c-card">
+          <div class="c-title">Transfer Status</div><div class="c-subtitle">All transfers breakdown</div>
+          <div class="legend-row" id="inv-status-legend" style="margin-top:8px;"></div>
+          <div class="donut-wrap h220"><canvas id="inv-status"></canvas><div class="donut-center"><div class="donut-center-val" id="inv-status-total">—</div><div class="donut-center-label">transfers</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYMENTS -->
+    <div class="tab-panel" id="tab-payments">
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card green"><div class="kpi-label">Total Inbound</div><div class="kpi-value" id="pay-inbound">—</div><div class="kpi-meta kpi-up" id="pay-inbound-sub">loading...</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Total Outbound</div><div class="kpi-value" id="pay-outbound">—</div><div class="kpi-meta" id="pay-outbound-sub">loading...</div></div>
+        <div class="kpi-card accent"><div class="kpi-label">Net Cash Position</div><div class="kpi-value" id="pay-net">—</div><div class="kpi-meta kpi-up" id="pay-net-sub">loading...</div></div>
+        <div class="kpi-card amber"><div class="kpi-label">In Process</div><div class="kpi-value" id="pay-process">—</div><div class="kpi-meta" id="pay-process-sub">loading...</div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Monthly Cash Flow</div><div class="c-subtitle">Inbound vs Outbound</div><div class="chart-wrap h280"><canvas id="pay-monthly"></canvas></div></div>
+        <div class="c-card">
+          <div class="c-title">Payment Status</div><div class="c-subtitle">All payments</div>
+          <div class="legend-row" id="pay-status-legend" style="margin-top:8px;"></div>
+          <div class="donut-wrap h220"><canvas id="pay-status"></canvas><div class="donut-center"><div class="donut-center-val" id="pay-status-total">—</div><div class="donut-center-label">payments</div></div></div>
+        </div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Top Receipt Sources</div><div class="c-subtitle">Highest inbound customers</div><div class="divider"></div><div class="bar-list" id="pay-top-inbound"></div></div>
+        <div class="c-card"><div class="c-title">Top Vendor Payouts</div><div class="c-subtitle">Highest outbound payments</div><div class="divider"></div><div class="bar-list" id="pay-top-outbound"></div></div>
+      </div>
+    </div>
+
+    <!-- PARTNERS -->
+    <div class="tab-panel" id="tab-partners">
+      <div class="kpi-grid kpi-4">
+        <div class="kpi-card accent"><div class="kpi-label">Total Partners</div><div class="kpi-value" id="part-total">—</div><div class="kpi-meta" id="part-total-sub">loading...</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Total Receivable</div><div class="kpi-value" id="part-ar">—</div><div class="kpi-meta" id="part-ar-sub">loading...</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Total Payable</div><div class="kpi-value" id="part-ap">—</div><div class="kpi-meta" id="part-ap-sub">loading...</div></div>
+        <div class="kpi-card amber"><div class="kpi-label">Total Overdue</div><div class="kpi-value" id="part-overdue">—</div><div class="kpi-meta kpi-down" id="part-overdue-sub">loading...</div></div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Partner Geography</div><div class="c-subtitle">Top countries</div><div class="chart-wrap h260"><canvas id="part-geo"></canvas></div></div>
+        <div class="c-card">
+          <div class="c-title">Partner Type Split</div><div class="c-subtitle">Customer vs Vendor</div>
+          <div class="legend-row" id="part-type-legend" style="margin-top:8px;"></div>
+          <div class="donut-wrap h220"><canvas id="part-type"></canvas></div>
+        </div>
+      </div>
+      <div class="chart-grid c-2">
+        <div class="c-card"><div class="c-title">Top by Receivable</div><div class="c-subtitle">Highest AR balances</div><div class="divider"></div><div class="bar-list" id="part-top-ar"></div></div>
+        <div class="c-card"><div class="c-title">Financial Summary</div><div class="c-subtitle">Partner ledger totals</div><div class="divider"></div><div id="part-summary"></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+const API = 'https://eurotech-api.vercel.app/api/odoo';
+const GRID = 'rgba(255,255,255,0.06)';
+const TEXT = '#8892a4';
+const COLS = {
+  blue:'#4f8ef7',green:'#22d3a5',amber:'#f5a623',
+  red:'#f25f5c',purple:'#a78bfa',gray:'#545d72',coral:'#f97171'
+};
+
+Chart.defaults.color = TEXT;
+Chart.defaults.font.family = "'Sora', sans-serif";
+Chart.defaults.font.size = 11;
+
+const charts = {};
+
+// ── helpers ──────────────────────────────────────────────
+const m2o = v => Array.isArray(v) ? v[1] : (v || '');
+const fmtQAR = n => {
+  if (!n) return 'QAR 0';
+  if (n >= 1e6) return 'QAR ' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return 'QAR ' + (n/1e3).toFixed(1) + 'K';
+  return 'QAR ' + Math.round(n).toLocaleString();
+};
+const fmtNum = n => n ? n.toLocaleString() : '0';
+const countBy = (arr, fn) => arr.reduce((a,r) => { const k=fn(r); a[k]=(a[k]||0)+1; return a; }, {});
+const sumBy  = (arr, fn) => arr.reduce((s,r) => s+(fn(r)||0), 0);
+
+function topN(obj, n=5) {
+  return Object.entries(obj).filter(([k])=>k&&k!=='false').sort((a,b)=>b[1]-a[1]).slice(0,n);
+}
+
+function makeChart(id, type, labels, datasets, extraOpts={}) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type,
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { backgroundColor:'#1a1e28', borderColor:'rgba(255,255,255,0.1)', borderWidth:1 }
+      },
+      scales: type==='doughnut'||type==='pie' ? {} : {
+        x: { grid:{color:GRID}, ticks:{color:TEXT} },
+        y: { grid:{color:GRID}, ticks:{color:TEXT} }
+      },
+      ...extraOpts
+    }
+  });
+}
+
+function renderBarList(id, entries, fmtVal, color) {
+  const el = document.getElementById(id);
+  if (!el || !entries.length) return;
+  const max = entries[0][1] || 1;
+  el.innerHTML = entries.map(([label, val]) => `
+    <div class="bar-row">
+      <div class="bar-label">${label.length>18?label.slice(0,18)+'…':label}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(val/max*100).toFixed(1)}%;background:${color||'var(--accent)'};"></div></div>
+      <div class="bar-num">${fmtVal(val)}</div>
+    </div>`).join('');
+}
+
+function renderLegend(id, items) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = items.map(([label,color]) =>
+    `<div class="leg-item"><div class="leg-sq" style="background:${color};"></div>${label}</div>`
+  ).join('');
+}
+
+function setEl(id, val) { const e=document.getElementById(id); if(e) e.textContent=val; }
+
+// ── API fetch ─────────────────────────────────────────────
+async function fetchModel(model, fields, limit=1000) {
+  const res = await fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, fields, limit })
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error || 'API error');
+  return json;
+}
+
+// ── RENDER FUNCTIONS ──────────────────────────────────────
+function renderSales(records) {
+  const total = records.length;
+  setEl('nb-sales', total);
+  const statusC = countBy(records, r => r.state);
+  const totalRev = sumBy(records, r => r.amount_total);
+  const uninv    = sumBy(records, r => r.amount_to_invoice);
+  const cancelled = statusC['cancel'] || 0;
+  const confirmed = statusC['sale'] || 0;
+
+  setEl('so-total', total);
+  setEl('so-total-sub', `Confirmed: ${confirmed} · Draft: ${statusC['draft']||0}`);
+  setEl('so-rev', fmtQAR(totalRev));
+  setEl('so-rev-sub', `Across all sales orders`);
+  setEl('so-uninv', fmtQAR(uninv));
+  setEl('so-uninv-sub', `${statusC['to invoice']||0} orders to invoice`);
+  setEl('so-cancel', cancelled);
+  setEl('so-cancel-sub', `${((cancelled/total)*100).toFixed(1)}% cancellation rate`);
+  setEl('so-status-total', total);
+
+  // Monthly
+  const monthly = {};
+  records.forEach(r => {
+    const m = (r.date_order||'').slice(0,7);
+    if (m) { monthly[m] = monthly[m] || {val:0,cnt:0}; monthly[m].val += r.amount_total||0; monthly[m].cnt++; }
+  });
+  const mLabels = Object.keys(monthly).sort().slice(-6);
+  makeChart('so-monthly','bar', mLabels, [
+    { label:'Revenue', data:mLabels.map(l=>monthly[l].val), backgroundColor:'rgba(79,142,247,0.6)', borderRadius:4, yAxisID:'y' },
+    { label:'Orders',  data:mLabels.map(l=>monthly[l].cnt), type:'line', borderColor:COLS.amber, backgroundColor:'transparent', pointBackgroundColor:COLS.amber, tension:0.4, yAxisID:'y2', pointRadius:3 }
+  ], { scales:{ x:{grid:{color:GRID},ticks:{color:TEXT}}, y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000)+'K':v}}, y2:{position:'right',grid:{display:false},ticks:{color:COLS.amber}} }});
+
+  // Status donut
+  const statuses = [['Draft',COLS.blue],['Confirmed',COLS.green],['Sent',COLS.amber],['Cancelled',COLS.red]];
+  const statKeys = ['draft','sale','sent','cancel'];
+  renderLegend('so-status-legend', statuses.map(([l,c],i)=>[`${l} ${statusC[statKeys[i]]||0}`,c]));
+  makeChart('so-status','doughnut',statuses.map(s=>s[0]),
+    [{ data:statKeys.map(k=>statusC[k]||0), backgroundColor:statuses.map(s=>s[1]), borderWidth:2, borderColor:'#0d0f14' }],
+    { cutout:'65%' });
+
+  // Top customers
+  const byCustomer = {};
+  records.forEach(r => { const n=m2o(r.partner_id); byCustomer[n]=(byCustomer[n]||0)+(r.amount_total||0); });
+  renderBarList('so-top-customers', topN(byCustomer), fmtQAR, COLS.blue);
+
+  // Salesperson
+  const bySP = {};
+  records.forEach(r => { const n=m2o(r.user_id); bySP[n]=(bySP[n]||0)+(r.amount_total||0); });
+  renderBarList('so-salesperson', topN(bySP), fmtQAR, COLS.green);
+
+  return { total, totalRev, confirmed, cancelled, statusC };
+}
+
+function renderInvoices(records) {
+  setEl('nb-invoices', records.length);
+  const outInv = records.filter(r=>r.move_type==='out_invoice');
+  const inInv  = records.filter(r=>r.move_type==='in_invoice');
+  const payC   = countBy(records, r=>r.payment_state);
+  const typeC  = countBy(records, r=>r.move_type);
+  const totalDue = sumBy(records, r=>r.amount_residual);
+  const outTotal = sumBy(outInv, r=>r.amount_total);
+  const inTotal  = sumBy(inInv,  r=>r.amount_total);
+
+  setEl('inv-total', records.length);
+  setEl('inv-total-sub', `${typeC['entry']||0} entries · ${outInv.length} invoices`);
+  setEl('inv-ar', fmtQAR(outTotal));
+  setEl('inv-ar-sub', `${outInv.length} customer invoices`);
+  setEl('inv-ap', fmtQAR(inTotal));
+  setEl('inv-ap-sub', `${inInv.length} vendor bills`);
+  setEl('inv-due', fmtQAR(totalDue));
+  setEl('inv-due-sub', `${payC['not_paid']||0} unpaid`);
+  setEl('inv-pay-total', records.length);
+
+  // Type donut
+  const types = [['Journal Entry',COLS.gray],['Vendor Bill',COLS.amber],['Customer Invoice',COLS.blue],['Credit Note',COLS.red]];
+  const typeKeys = ['entry','in_invoice','out_invoice','out_refund'];
+  renderLegend('inv-type-legend', types.map(([l,c],i)=>[`${l} ${typeC[typeKeys[i]]||0}`,c]));
+  makeChart('inv-type','doughnut',types.map(s=>s[0]),
+    [{ data:typeKeys.map(k=>typeC[k]||0), backgroundColor:types.map(s=>s[1]), borderWidth:2, borderColor:'#0d0f14' }],
+    { cutout:'58%' });
+
+  // Pay status donut
+  const payStatuses = [['Not Paid',COLS.red],['Paid',COLS.green],['In Payment',COLS.amber]];
+  const payKeys = ['not_paid','paid','in_payment'];
+  renderLegend('inv-pay-legend', payStatuses.map(([l,c],i)=>[`${l} ${payC[payKeys[i]]||0}`,c]));
+  makeChart('inv-pay-status','doughnut',payStatuses.map(s=>s[0]),
+    [{ data:payKeys.map(k=>payC[k]||0), backgroundColor:payStatuses.map(s=>s[1]), borderWidth:2, borderColor:'#0d0f14' }],
+    { cutout:'60%' });
+
+  // Monthly customer invoices
+  const monthly = {};
+  outInv.forEach(r => {
+    const m=(r.invoice_date||'').slice(0,7);
+    if(m){monthly[m]=monthly[m]||{val:0,cnt:0};monthly[m].val+=r.amount_total||0;monthly[m].cnt++;}
+  });
+  const mLabels = Object.keys(monthly).sort().slice(-6);
+  makeChart('inv-monthly','bar',mLabels,
+    [{ label:'Value', data:mLabels.map(l=>monthly[l]?.val||0), backgroundColor:'rgba(79,142,247,0.7)', borderRadius:4 }],
+    { scales:{x:{grid:{display:false},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}}});
+
+  // Summary
+  const summaryEl = document.getElementById('inv-summary');
+  if (summaryEl) summaryEl.innerHTML = [
+    ['Customer Invoices Total', fmtQAR(outTotal)],
+    ['Vendor Bills Total', fmtQAR(inTotal)],
+    ['Net AR Surplus', fmtQAR(outTotal - inTotal)],
+    ['Amount Due', fmtQAR(totalDue)],
+    ['Posted', `${typeC['posted']||payC['not_paid']||0}`],
+    ['Paid', `${payC['paid']||0}`],
+  ].map(([k,v])=>`<div class="stat-row"><span class="stat-key">${k}</span><span class="stat-val">${v}</span></div>`).join('');
+
+  return { totalDue };
+}
+
+function renderPurchase(records) {
+  setEl('nb-purchase', records.length);
+  const statusC  = countBy(records, r=>r.state);
+  const billingC = countBy(records, r=>r.invoice_status);
+  const receiptC = countBy(records, r=>r.receipt_status);
+  const total    = sumBy(records, r=>r.amount_total);
+  const currC    = countBy(records, r=>m2o(r.currency_id));
+
+  setEl('po-total', records.length);
+  setEl('po-total-sub', `${statusC['purchase']||0} confirmed · ${statusC['draft']||0} draft`);
+  setEl('po-spend', fmtQAR(total));
+  setEl('po-spend-sub', `Across all vendors`);
+  setEl('po-billing', billingC['to invoice']||0);
+  setEl('po-billing-sub', `Need billing`);
+  setEl('po-receipt', receiptC['pending']||0);
+  setEl('po-receipt-sub', `${receiptC['full']||0} fully received`);
+
+  // Monthly
+  const monthly = {};
+  records.forEach(r => {
+    const m=(r.date_order||'').slice(0,7);
+    if(m){monthly[m]=monthly[m]||{val:0,cnt:0};monthly[m].val+=r.amount_total||0;monthly[m].cnt++;}
+  });
+  const mLabels = Object.keys(monthly).sort().slice(-6);
+  makeChart('po-monthly','bar',mLabels,[
+    { label:'Spend', data:mLabels.map(l=>monthly[l]?.val||0), backgroundColor:'rgba(167,139,250,0.7)', borderRadius:4, yAxisID:'y' },
+    { label:'Count', data:mLabels.map(l=>monthly[l]?.cnt||0), type:'line', borderColor:COLS.coral, backgroundColor:'transparent', pointBackgroundColor:COLS.coral, tension:0.4, yAxisID:'y2', pointRadius:3 }
+  ],{ scales:{x:{grid:{color:GRID},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1000?(v/1000)+'K':v}},y2:{position:'right',grid:{display:false},ticks:{color:COLS.coral}}}});
+
+  // Currency donut
+  const currEntries = topN(currC, 5);
+  const currColors  = [COLS.blue,COLS.green,COLS.amber,COLS.purple,COLS.gray];
+  renderLegend('po-curr-legend', currEntries.map(([l,v],i)=>[`${l} ${v}`,currColors[i]]));
+  makeChart('po-currency','doughnut',currEntries.map(e=>e[0]),
+    [{ data:currEntries.map(e=>e[1]), backgroundColor:currColors.slice(0,currEntries.length), borderWidth:2, borderColor:'#0d0f14' }],
+    { cutout:'58%' });
+
+  // Top vendors
+  const byVendor = {};
+  records.forEach(r=>{const n=m2o(r.partner_id);byVendor[n]=(byVendor[n]||0)+(r.amount_total||0);});
+  renderBarList('po-top-vendors', topN(byVendor), fmtQAR, COLS.coral);
+
+  // Status summary
+  const statusEl = document.getElementById('po-status-summary');
+  if (statusEl) statusEl.innerHTML = [
+    ['Confirmed', statusC['purchase']||0, 'pill-green'],
+    ['Draft',     statusC['draft']||0,    'pill-amber'],
+    ['Cancelled', statusC['cancel']||0,   'pill-red'],
+    ['Sent',      statusC['sent']||0,     'pill-blue'],
+    ['To Invoice',billingC['to invoice']||0,'pill-amber'],
+    ['Invoiced',  billingC['invoiced']||0, 'pill-green'],
+  ].map(([k,v,c])=>`<div class="stat-row"><span class="stat-key">${k}</span><span class="stat-val"><span class="pill ${c}">${v}</span></span></div>`).join('');
+}
+
+function renderInventory(records) {
+  setEl('nb-inventory', records.length);
+  const statusC = countBy(records, r=>r.state);
+  const late    = records.filter(r=>r.has_deadline_issue).length;
+  const done    = statusC['done']||0;
+
+  setEl('inv-del-total', records.length);
+  setEl('inv-del-total-sub', `${statusC['assigned']||0} assigned · ${statusC['confirmed']||0} confirmed`);
+  setEl('inv-del-done', done);
+  setEl('inv-del-done-sub', `${((done/records.length)*100).toFixed(1)}% completion rate`);
+  setEl('inv-del-assigned', statusC['assigned']||0);
+  setEl('inv-del-assigned-sub', `Ready for execution`);
+  setEl('inv-del-late', late);
+  setEl('inv-del-late-sub', `${((late/records.length)*100).toFixed(1)}% late rate`);
+  setEl('inv-status-total', records.length);
+
+  // Monthly
+  const monthly = {};
+  records.forEach(r=>{const m=(r.scheduled_date||'').slice(0,7);if(m)monthly[m]=(monthly[m]||0)+1;});
+  const mLabels = Object.keys(monthly).sort().filter(m=>m<='2026-04').slice(-6);
+  makeChart('inv-monthly-transfers','bar',mLabels,
+    [{ label:'Transfers', data:mLabels.map(l=>monthly[l]||0), backgroundColor:'rgba(245,166,35,0.7)', borderRadius:4 }],
+    { scales:{x:{grid:{color:GRID},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT}}}});
+
+  // Status donut
+  const statuses = [['Done',COLS.green],['Assigned',COLS.blue],['Cancelled',COLS.red],['Confirmed',COLS.amber],['Waiting',COLS.gray]];
+  const statKeys = ['done','assigned','cancel','confirmed','waiting'];
+  renderLegend('inv-status-legend', statuses.map(([l,c],i)=>[`${l} ${statusC[statKeys[i]]||0}`,c]));
+  makeChart('inv-status','doughnut',statuses.map(s=>s[0]),
+    [{ data:statKeys.map(k=>statusC[k]||0), backgroundColor:statuses.map(s=>s[1]), borderWidth:2, borderColor:'#0d0f14' }],
+    { cutout:'65%' });
+}
+
+function renderPayments(records) {
+  setEl('nb-payments', records.length);
+  const inbound  = records.filter(r=>r.payment_type==='inbound');
+  const outbound = records.filter(r=>r.payment_type==='outbound');
+  const statusC  = countBy(records, r=>r.state);
+  const inTotal  = sumBy(inbound,  r=>r.amount);
+  const outTotal = sumBy(outbound, r=>r.amount);
+  const net      = inTotal - outTotal;
+
+  setEl('pay-inbound',  fmtQAR(inTotal));
+  setEl('pay-inbound-sub', `${inbound.length} receipts`);
+  setEl('pay-outbound', fmtQAR(outTotal));
+  setEl('pay-outbound-sub', `${outbound.length} payments`);
+  setEl('pay-net', fmtQAR(net));
+  setEl('pay-net-sub', net>=0 ? 'Positive cash flow' : 'Negative cash flow');
+  setEl('pay-process', statusC['in_process']||0);
+  setEl('pay-process-sub', `PDC cheques pending`);
+  setEl('pay-status-total', records.length);
+
+  // Monthly
+  const monthly = {inbound:{},outbound:{}};
+  records.forEach(r=>{
+    const m=(r.date||'').slice(0,7);
+    if(!m)return;
+    const t=r.payment_type;
+    if(t==='inbound'||t==='outbound'){monthly[t][m]=(monthly[t][m]||0)+(r.amount||0);}
+  });
+  const allMonths=[...new Set([...Object.keys(monthly.inbound),...Object.keys(monthly.outbound)])].sort().slice(-6);
+  makeChart('pay-monthly','bar',allMonths,[
+    { label:'Inbound',  data:allMonths.map(l=>monthly.inbound[l]||0),  backgroundColor:'rgba(34,211,165,0.7)',  borderRadius:4 },
+    { label:'Outbound', data:allMonths.map(l=>monthly.outbound[l]||0), backgroundColor:'rgba(242,95,92,0.6)', borderRadius:4 }
+  ],{ plugins:{legend:{display:true,labels:{color:TEXT,font:{size:11},boxWidth:12}}}, scales:{x:{grid:{color:GRID},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}}});
+
+  // Status donut
+  const statuses=[['In Process',COLS.amber],['Paid',COLS.green],['Cancelled',COLS.red],['Draft',COLS.gray]];
+  const statKeys=['in_process','paid','canceled','draft'];
+  renderLegend('pay-status-legend', statuses.map(([l,c],i)=>[`${l} ${statusC[statKeys[i]]||0}`,c]));
+  makeChart('pay-status','doughnut',statuses.map(s=>s[0]),
+    [{ data:statKeys.map(k=>statusC[k]||0), backgroundColor:statuses.map(s=>s[1]), borderWidth:2, borderColor:'#0d0f14' }],
+    { cutout:'65%' });
+
+  // Top inbound
+  const byIn={};
+  inbound.forEach(r=>{const n=m2o(r.partner_id);byIn[n]=(byIn[n]||0)+(r.amount||0);});
+  renderBarList('pay-top-inbound', topN(byIn), fmtQAR, COLS.green);
+
+  // Top outbound
+  const byOut={};
+  outbound.forEach(r=>{const n=m2o(r.partner_id);byOut[n]=(byOut[n]||0)+(r.amount||0);});
+  renderBarList('pay-top-outbound', topN(byOut), fmtQAR, COLS.red);
+
+  return { inTotal, outTotal };
+}
+
+function renderPartners(records) {
+  setEl('nb-partners', records.length);
+  const customers = records.filter(r=>(r.customer_rank||0)>0);
+  const vendors   = records.filter(r=>(r.supplier_rank||0)>0);
+  const totalAR   = sumBy(records, r=>r.credit||0);
+  const totalAP   = sumBy(records, r=>r.debit||0);
+  const overdue   = sumBy(records, r=>r.total_all_overdue||0);
+
+  setEl('part-total', records.length);
+  setEl('part-total-sub', `${customers.length} customers · ${vendors.length} vendors`);
+  setEl('part-ar', fmtQAR(totalAR));
+  setEl('part-ar-sub', `Outstanding receivables`);
+  setEl('part-ap', fmtQAR(totalAP));
+  setEl('part-ap-sub', `Outstanding payables`);
+  setEl('part-overdue', fmtQAR(Math.abs(overdue)));
+  setEl('part-overdue-sub', `Past due balances`);
+
+  // Geography
+  const geoC = countBy(records, r=>m2o(r.country_id));
+  const geoTop = topN(geoC, 7);
+  const geoColors=[COLS.blue,COLS.green,COLS.amber,COLS.purple,COLS.red,COLS.coral,COLS.gray];
+  makeChart('part-geo','bar',geoTop.map(e=>e[0]),
+    [{ data:geoTop.map(e=>e[1]), backgroundColor:geoColors.slice(0,geoTop.length), borderRadius:4 }],
+    { scales:{x:{grid:{display:false},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT}}}});
+
+  // Type donut
+  const neither = records.length - customers.length - vendors.length;
+  const partTypes=[['Vendors',COLS.blue],['Customers',COLS.green],['Other',COLS.gray]];
+  renderLegend('part-type-legend', partTypes.map(([l,c],i)=>[`${l} ${[vendors.length,customers.length,Math.max(0,neither)][i]}`,c]));
+  makeChart('part-type','doughnut',partTypes.map(s=>s[0]),
+    [{ data:[vendors.length,customers.length,Math.max(0,neither)], backgroundColor:partTypes.map(s=>s[1]), borderWidth:2, borderColor:'#0d0f14' }],
+    { cutout:'58%' });
+
+  // Top AR
+  const byAR={};
+  records.forEach(r=>{if((r.credit||0)>0)byAR[r.name]=(byAR[r.name]||0)+(r.credit||0);});
+  renderBarList('part-top-ar', topN(byAR), fmtQAR, COLS.green);
+
+  // Summary
+  const avgDSO = records.filter(r=>r.days_sales_outstanding>0);
+  const dso = avgDSO.length ? (sumBy(avgDSO,r=>r.days_sales_outstanding)/avgDSO.length).toFixed(0) : '—';
+  const summaryEl = document.getElementById('part-summary');
+  if (summaryEl) summaryEl.innerHTML = [
+    ['Total Receivable (AR)',  fmtQAR(totalAR)],
+    ['Total Payable (AP)',     fmtQAR(totalAP)],
+    ['Net Working Capital',   fmtQAR(totalAR - totalAP)],
+    ['Total Overdue',         fmtQAR(Math.abs(overdue))],
+    ['Avg Days Sales Outstanding', dso + ' days'],
+    ['Total Partners',        records.length],
+    ['Companies',             records.filter(r=>r.is_company).length],
+    ['Individuals',           records.filter(r=>!r.is_company).length],
+  ].map(([k,v])=>`<div class="stat-row"><span class="stat-key">${k}</span><span class="stat-val">${v}</span></div>`).join('');
+
+  return { totalAR, totalAP, overdue };
+}
+
+function renderOverview(salesData, invoiceData, purchaseData, paymentData, partnerData, allCounts) {
+  const { totalRev, total:soTotal, confirmed, cancelled, statusC:soStatus } = salesData;
+  const { totalDue } = invoiceData;
+  const { inTotal, outTotal } = paymentData;
+  const { totalAR, totalAP, overdue } = partnerData;
+  const poSpend = purchaseData;
+
+  setEl('ov-rev', fmtQAR(totalRev));
+  setEl('ov-rev-sub', `${soTotal} total orders`);
+  setEl('ov-received', fmtQAR(inTotal));
+  setEl('ov-received-sub', `vs ${fmtQAR(outTotal)} paid out`);
+  setEl('ov-due', fmtQAR(totalDue));
+  setEl('ov-due-sub', `Unpaid invoices`);
+  setEl('ov-spend', fmtQAR(poSpend));
+  setEl('ov-spend-sub', `Purchase orders`);
+  setEl('ov-overdue', fmtQAR(Math.abs(overdue)));
+  setEl('ov-overdue-sub', `Past due balances`);
+
+  // Revenue chart (use monthly from sales data)
+  const monthly={};
+  window._salesRecords.forEach(r=>{
+    const m=(r.date_order||'').slice(0,7);
+    if(m){monthly[m]=monthly[m]||{val:0,cnt:0};monthly[m].val+=r.amount_total||0;monthly[m].cnt++;}
+  });
+  const mLabels=Object.keys(monthly).sort().slice(-6);
+  makeChart('ov-revenue','bar',mLabels,[
+    { label:'Revenue', data:mLabels.map(l=>monthly[l]?.val||0), backgroundColor:'rgba(79,142,247,0.7)', borderRadius:4, yAxisID:'y' },
+    { label:'Orders',  data:mLabels.map(l=>monthly[l]?.cnt||0), type:'line', borderColor:COLS.green, backgroundColor:'transparent', pointBackgroundColor:COLS.green, tension:0.4, yAxisID:'y2', pointRadius:3 }
+  ],{ scales:{x:{grid:{color:GRID},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1000?(v/1000)+'K':v}},y2:{position:'right',grid:{display:false},ticks:{color:COLS.green}}}});
+
+  // Cash flow
+  const cfMonthly={inbound:{},outbound:{}};
+  window._paymentRecords.forEach(r=>{
+    const m=(r.date||'').slice(0,7);if(!m)return;
+    const t=r.payment_type;
+    if(t==='inbound'||t==='outbound')cfMonthly[t][m]=(cfMonthly[t][m]||0)+(r.amount||0);
+  });
+  const cfMonths=[...new Set([...Object.keys(cfMonthly.inbound),...Object.keys(cfMonthly.outbound)])].sort().slice(-4);
+  makeChart('ov-cashflow','bar',cfMonths,[
+    { label:'Inbound',  data:cfMonths.map(l=>cfMonthly.inbound[l]||0),  backgroundColor:'rgba(34,211,165,0.7)',  borderRadius:4 },
+    { label:'Outbound', data:cfMonths.map(l=>cfMonthly.outbound[l]||0), backgroundColor:'rgba(242,95,92,0.6)', borderRadius:4 }
+  ],{ scales:{x:{grid:{color:GRID},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}}});
+
+  // Modules bar
+  makeChart('ov-modules','bar',
+    ['Sales','Invoices','Inventory','Partners','POs','Payments'],
+    [{ data:allCounts, backgroundColor:[COLS.blue,COLS.green,COLS.amber,COLS.purple,COLS.coral,COLS.red], borderRadius:5 }],
+    { indexAxis:'y', scales:{x:{grid:{color:GRID},ticks:{color:TEXT}},y:{grid:{display:false},ticks:{color:TEXT}}}});
+
+  // Health indicators
+  const healthEl = document.getElementById('ov-health');
+  const soTotalN = window._salesRecords.length;
+  const invTotalN = window._inventoryRecords.length;
+  const invDone  = window._inventoryRecords.filter(r=>r.state==='done').length;
+  const health = [
+    ['Sales order confirmation rate', ((soStatus['sale']||0)/soTotalN*100).toFixed(1)+'%', (soStatus['sale']||0)/soTotalN*100, 'var(--amber)'],
+    ['Delivery completion rate',      (invDone/invTotalN*100).toFixed(1)+'%', invDone/invTotalN*100, 'var(--green)'],
+    ['AR / AP coverage ratio',        ((totalAR/totalAP)*100).toFixed(0)+'%', Math.min(totalAR/totalAP*100,100), 'var(--green)'],
+    ['Invoice payment rate',          (((window._invoiceRecords.filter(r=>r.payment_state==='paid').length)/window._invoiceRecords.length)*100).toFixed(1)+'%', (window._invoiceRecords.filter(r=>r.payment_state==='paid').length)/window._invoiceRecords.length*100, 'var(--red)'],
+    ['Cash flow ratio (in/out)',       (inTotal/outTotal).toFixed(2)+'x', Math.min(inTotal/outTotal/5*100,100), 'var(--green)'],
+  ];
+  if(healthEl) healthEl.innerHTML = health.map(([n,v,w,c])=>`
+    <div class="health-item">
+      <div class="health-header"><span class="health-name">${n}</span><span class="health-val">${v}</span></div>
+      <div class="health-track"><div class="health-fill" style="width:${Math.min(w,100).toFixed(1)}%;background:${c};"></div></div>
+    </div>`).join('');
+
+  // Top customers
+  const byCustomer={};
+  window._salesRecords.forEach(r=>{const n=m2o(r.partner_id);byCustomer[n]=(byCustomer[n]||0)+(r.amount_total||0);});
+  renderBarList('ov-top-customers', topN(byCustomer), fmtQAR, COLS.blue);
+
+  // Salesperson
+  const bySP={};
+  window._salesRecords.forEach(r=>{const n=m2o(r.user_id);bySP[n]=(bySP[n]||0)+(r.amount_total||0);});
+  const spTop = topN(bySP,5);
+  makeChart('ov-salesperson','bar',spTop.map(e=>e[0].split(' ')[0]),
+    [{ data:spTop.map(e=>e[1]), backgroundColor:'rgba(34,211,165,0.7)', borderRadius:4 }],
+    { scales:{x:{grid:{display:false},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v}}}});
+
+  // AR/AP bar
+  makeChart('ov-ar-ap','bar',['Receivable (AR)','Payable (AP)'],
+    [{ data:[totalAR, totalAP], backgroundColor:['rgba(34,211,165,0.7)','rgba(242,95,92,0.7)'], borderRadius:6 }],
+    { scales:{x:{grid:{display:false},ticks:{color:TEXT}},y:{grid:{color:GRID},ticks:{color:TEXT,callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}}});
+}
+
+// ── TAB SWITCHING ──────────────────────────────────────────
+const tabTitles = {
+  overview:  ['Overview','Live data · All modules'],
+  sales:     ['Sales Orders','Live · sale.order'],
+  invoices:  ['Invoices','Live · account.move'],
+  purchase:  ['Purchase Orders','Live · purchase.order'],
+  inventory: ['Inventory & Deliveries','Live · stock.picking'],
+  payments:  ['Payments','Live · account.payment'],
+  partners:  ['Customers & Vendors','Live · res.partner'],
+};
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  setEl('page-title', tabTitles[id][0]);
+  setEl('page-subtitle', tabTitles[id][1]);
+}
+
+// ── MAIN LOAD ─────────────────────────────────────────────
+function setProgress(msg) { setEl('loader-progress', msg); }
+function showError(msg) {
+  const el = document.getElementById('error-banner');
+  if(el){el.textContent=msg;el.style.display='block';}
+}
+
+async function loadAll() {
+  document.getElementById('loader').style.display = 'flex';
+  setEl('live-label', 'Loading...');
+  try {
+    setProgress('Loading Sales Orders...');
+    const soRes = await fetchModel('sale.order',
+      ['name','partner_id','amount_total','amount_to_invoice','state',
+       'invoice_status','delivery_status','date_order','user_id','team_id']);
+    window._salesRecords = soRes.records;
+
+    setProgress('Loading Invoices...');
+    const invRes = await fetchModel('account.move',
+      ['name','move_type','state','payment_state','amount_total',
+       'amount_residual','invoice_date','partner_id','journal_id'],800);
+    window._invoiceRecords = invRes.records;
+
+    setProgress('Loading Purchase Orders...');
+    const poRes = await fetchModel('purchase.order',
+      ['name','partner_id','amount_total','state','invoice_status',
+       'receipt_status','date_order','currency_id']);
+    window._purchaseRecords = poRes.records;
+
+    setProgress('Loading Inventory...');
+    const invDelRes = await fetchModel('stock.picking',
+      ['name','state','picking_type_code','scheduled_date',
+       'partner_id','has_deadline_issue','date_done']);
+    window._inventoryRecords = invDelRes.records;
+
+    setProgress('Loading Payments...');
+    const payRes = await fetchModel('account.payment',
+      ['name','date','state','payment_type','partner_type',
+       'partner_id','amount','journal_id']);
+    window._paymentRecords = payRes.records;
+
+    setProgress('Loading Partners...');
+    const partRes = await fetchModel('res.partner',
+      ['name','customer_rank','supplier_rank','credit','debit',
+       'country_id','total_all_overdue','days_sales_outstanding',
+       'is_company','total_invoiced']);
+    window._partnerRecords = partRes.records;
+
+    setProgress('Rendering dashboard...');
+
+    // Render all tabs
+    const salesData   = renderSales(window._salesRecords);
+    const invoiceData = renderInvoices(window._invoiceRecords);
+    renderPurchase(window._purchaseRecords);
+    renderInventory(window._inventoryRecords);
+    const payData     = renderPayments(window._paymentRecords);
+    const partData    = renderPartners(window._partnerRecords);
+
+    const poSpend = sumBy(window._purchaseRecords, r=>r.amount_total);
+    const allCounts = [soRes.total,invRes.total,invDelRes.total,partRes.total,poRes.total,payRes.total];
+    renderOverview(salesData, invoiceData, poSpend, payData, partData, allCounts);
+
+    // Update UI
+    const now = new Date();
+    setEl('last-updated', 'Updated: ' + now.toLocaleTimeString());
+    setEl('live-label', 'Live');
+
+  } catch(err) {
+    console.error(err);
+    showError('Failed to load data: ' + err.message + ' — Check API at eurotech-api.vercel.app');
+    setEl('live-label', 'Error');
+  } finally {
+    document.getElementById('loader').style.display = 'none';
+  }
+}
+
+// Auto-refresh every 10 minutes
+loadAll();
+setInterval(loadAll, 10 * 60 * 1000);
+</script>
+</body>
+</html>
